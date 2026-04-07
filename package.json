@@ -1,0 +1,19 @@
+{
+  "name": "skillchain",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "skillchain-frontend",
+    "skillchain-backend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix skillchain-frontend\" \"npm run dev --prefix skillchain-backend\"",
+    "frontend": "npm run dev --prefix skillchain-frontend",
+    "backend": "npm run dev --prefix skillchain-backend",
+    "build": "npm run build --prefix skillchain-frontend",
+    "lint": "npm run lint --prefix skillchain-frontend"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
