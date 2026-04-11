@@ -97,32 +97,48 @@ export default function Home() {
       <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
 
       {/* Navigation */}
-      <header className="relative z-50 mx-auto mt-6 flex w-full max-w-7xl items-center justify-between rounded-full border border-border bg-surface/50 px-6 py-3 backdrop-blur-xl transition-all sm:px-8">
-        <div className="flex items-center gap-2">
-          <Cpu className="h-6 w-6 text-accent" />
-          <p className="text-base font-bold uppercase tracking-widest text-foreground">
-            SkillChain<span className="text-accent">.AI</span>
-          </p>
-        </div>
-        <nav className="hidden items-center gap-8 md:flex">
-          <Link href="#features" className="text-sm font-medium text-muted hover:text-foreground transition-colors">Features</Link>
-          <Link href="#how-it-works" className="text-sm font-medium text-muted hover:text-foreground transition-colors">How it Works</Link>
-          <Link href="/dashboard" className="text-sm font-medium text-muted hover:text-foreground transition-colors">Dashboard</Link>
-        </nav>
-        <div className="flex items-center gap-4">
-          <Link href="/login" className="hidden text-sm font-medium hover:text-accent transition-colors sm:block">
-            Sign In
-          </Link>
-          <Link
-            href="/login"
-            className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-accent px-5 py-2 font-medium text-white shadow-lg shadow-accent/40 transition-all hover:scale-105 hover:bg-accent/90 hover:shadow-accent/60 active:scale-95"
-          >
-            <span className="relative z-10 flex items-center gap-2">
-              Launch App <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </span>
-          </Link>
-        </div>
-      </header>
+      <motion.div 
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+        className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 w-full pointer-events-none"
+      >
+        <header className="pointer-events-auto flex w-full max-w-4xl items-center justify-between rounded-full border border-white/10 bg-background/40 px-4 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-2xl transition-all sm:px-6">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 border border-accent/20">
+              <Cpu className="h-4 w-4 text-accent" />
+            </div>
+            <p className="hidden sm:block text-sm font-bold uppercase tracking-widest text-foreground">
+              SkillChain<span className="text-accent"></span>
+            </p>
+          </div>
+          <div className="hidden items-center gap-1 md:flex rounded-full bg-white/5 border border-white/5 shadow-inner p-1">
+            <Link href="#features" className="px-4 py-1.5 rounded-full text-sm font-medium text-muted hover:text-white hover:bg-white/10 transition-all">
+              Features
+            </Link>
+            <Link href="#how-it-works" className="px-4 py-1.5 rounded-full text-sm font-medium text-muted hover:text-white hover:bg-white/10 transition-all">
+              How it Works
+            </Link>
+            <Link href="/dashboard" className="px-4 py-1.5 rounded-full text-sm font-medium text-accent hover:text-accent hover:bg-accent/20 transition-all">
+              Dashboard
+            </Link>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link href="/login" className="hidden text-sm font-medium text-muted hover:text-white transition-colors sm:block">
+              Log In
+            </Link>
+            <Link
+              href="/login"
+              className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-gradient-to-r from-accent to-emerald-400 px-5 py-2 font-medium text-background shadow-[0_0_20px_rgba(52,211,153,0.3)] transition-all hover:scale-105 hover:shadow-[0_0_25px_rgba(52,211,153,0.5)] active:scale-95 border border-white/20"
+            >
+              <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
+              <span className="relative z-10 flex items-center gap-2 font-bold">
+                Launch App <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </span>
+            </Link>
+          </div>
+        </header>
+      </motion.div>
 
       <main className="relative z-10 mx-auto w-full max-w-7xl px-6 sm:px-10 lg:px-12">
         {/* HERO SECTION */}
