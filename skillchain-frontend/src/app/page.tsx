@@ -119,6 +119,9 @@ export default function Home() {
             <Link href="#how-it-works" className="px-4 py-1.5 rounded-full text-sm font-medium text-muted hover:text-white hover:bg-white/10 transition-all">
               How it Works
             </Link>
+            <Link href="/verify" className="px-4 py-1.5 rounded-full text-sm font-medium text-muted hover:text-white hover:bg-white/10 transition-all">
+              Verify ID
+            </Link>
             <Link href="/dashboard" className="px-4 py-1.5 rounded-full text-sm font-medium text-accent hover:text-accent hover:bg-accent/20 transition-all">
               Dashboard
             </Link>
@@ -175,6 +178,12 @@ export default function Home() {
                 className="flex h-14 items-center justify-center rounded-full border-2 border-border bg-surface px-8 text-base font-semibold text-foreground backdrop-blur-sm transition-colors hover:bg-border/50"
               >
                 See how it works
+              </Link>
+              <Link
+                href="/verify"
+                className="flex h-14 items-center justify-center rounded-full border-2 border-accent/30 bg-accent/10 px-8 text-base font-semibold text-accent backdrop-blur-sm transition-colors hover:bg-accent/15"
+              >
+                Verify Certificate ID
               </Link>
             </motion.div>
 

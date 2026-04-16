@@ -1,5 +1,3 @@
-import BackButton from "@/components/BackButton";
-
 export default function DashboardPage() {
   const stats = [
     {
@@ -44,8 +42,7 @@ export default function DashboardPage() {
   ];
 
   return (
-    <main className="mx-auto w-full max-w-5xl p-6 pt-24 sm:p-10 sm:pt-32 lg:p-12 lg:pt-32 mb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <BackButton />
+    <main className="w-full p-6 pt-4 sm:p-8 sm:pt-4 lg:p-10 lg:pt-4 mb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
       <div className="space-y-3 mb-12">
         <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">

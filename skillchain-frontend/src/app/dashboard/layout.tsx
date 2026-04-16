@@ -1,5 +1,6 @@
 import Link from "next/link";
 import React from "react";
+import BackButton from "@/components/BackButton";
 
 export default function DashboardLayout({
   children,
@@ -64,6 +65,9 @@ export default function DashboardLayout({
         </header>
         
         <div className="flex-1 relative z-10">
+          <div className="hidden px-6 pt-6 md:block lg:px-8">
+            <BackButton href="/" text="Back to Home" />
+          </div>
           {children}
         </div>
       </div>
