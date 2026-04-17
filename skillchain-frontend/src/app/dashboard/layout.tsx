@@ -1,12 +1,26 @@
 import Link from "next/link";
 import React from "react";
 import BackButton from "@/components/BackButton";
+import { createClient } from "@/utils/supabase/server";
 
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const displayName =
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.email?.split("@")[0] ||
+    "Developer";
+  const displayEmail = user?.email || "dev@skillchain.ai";
+  const avatarLetter = displayName.charAt(0).toUpperCase() || "D";
+
   return (
     <div className="flex min-h-screen w-full relative">
       {/* Sidebar */}
@@ -42,11 +56,11 @@ export default function DashboardLayout({
         <div className="p-4 border-t border-border/50">
           <div className="flex items-center gap-3 rounded-2xl bg-surface-strong/50 border border-border/30 p-3 backdrop-blur shadow-sm">
             <div className="h-9 w-9 rounded-full bg-gradient-to-br from-accent to-accent-strong text-white flex items-center justify-center font-bold shadow-inner">
-              D
+              {avatarLetter}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-semibold truncate leading-tight">Developer</p>
-              <p className="text-[11px] text-muted truncate mt-0.5">dev@skillchain.ai</p>
+              <p className="text-sm font-semibold truncate leading-tight">{displayName}</p>
+              <p className="text-[11px] text-muted truncate mt-0.5">{displayEmail}</p>
             </div>
           </div>
         </div>

@@ -2,14 +2,26 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import BackButton from "@/components/BackButton";
 import { createClient } from "@/utils/supabase/client";
 
 export default function LoginPage() {
+  const router = useRouter();
   const [loading, setLoading] = useState<'github' | 'google' | null>(null);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
+  const [formLoading, setFormLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const supabase = createClient();
 
   const handleOAuthLogin = async (provider: 'github' | 'google') => {
+    setMessage(null);
+    setErrorMessage(null);
     setLoading(provider);
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
@@ -20,8 +32,82 @@ export default function LoginPage() {
 
     if (error) {
       console.error(error);
+      setErrorMessage(error.message);
       setLoading(null);
     }
+  };
+
+  const handleEmailAuth = async () => {
+    setMessage(null);
+    setErrorMessage(null);
+
+    if (!email || !password) {
+      setErrorMessage("Email and password are required.");
+      return;
+    }
+
+    if (authMode === "signup") {
+      if (!name.trim()) {
+        setErrorMessage("Name is required for sign up.");
+        return;
+      }
+
+      if (password.length < 6) {
+        setErrorMessage("Password must be at least 6 characters long.");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setErrorMessage("Password and confirm password must match.");
+        return;
+      }
+    }
+
+    setFormLoading(true);
+
+    if (authMode === "signin") {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        setFormLoading(false);
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
+      return;
+    }
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: {
+          full_name: name.trim(),
+          name: name.trim(),
+        },
+      },
+    });
+
+    if (error) {
+      setErrorMessage(error.message);
+      setFormLoading(false);
+      return;
+    }
+
+    if (data.session) {
+      router.push("/dashboard");
+      router.refresh();
+      return;
+    }
+
+    setMessage("Account created. Check your email to confirm your account, then sign in.");
+    setFormLoading(false);
   };
 
   return (
@@ -33,18 +119,140 @@ export default function LoginPage() {
             Authentication
           </p>
           <h1 className="text-4xl font-semibold tracking-tight">
-            Sign in to start verifying developer skills
+            Sign in or create your SkillChain profile
           </h1>
           <p className="text-base leading-7 text-muted">
-            Connect via GitHub to easily link repositories later, or sign in securely with Google.
+            Use OAuth for quick access, or create an account with your name, email, and password for a complete profile.
           </p>
         </div>
 
         <div className="rounded-[1.5rem] bg-surface-strong p-6 flex flex-col justify-center">
+          <div className="mb-5 inline-flex rounded-full border border-border bg-background p-1">
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("signin");
+                setMessage(null);
+                setErrorMessage(null);
+              }}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                authMode === "signin"
+                  ? "bg-accent text-white"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode("signup");
+                setMessage(null);
+                setErrorMessage(null);
+              }}
+              className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                authMode === "signup"
+                  ? "bg-accent text-white"
+                  : "text-muted hover:text-foreground"
+              }`}
+            >
+              Sign Up
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {authMode === "signup" && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="name">
+                  Full name
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  placeholder="Enter your full name"
+                  className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-accent"
+                />
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground" htmlFor="email">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="Enter your email"
+                className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-accent"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground" htmlFor="password">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder={authMode === "signup" ? "Create a password" : "Enter your password"}
+                className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-accent"
+              />
+            </div>
+
+            {authMode === "signup" && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground" htmlFor="confirmPassword">
+                  Confirm password
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  placeholder="Confirm your password"
+                  className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none transition-colors focus:border-accent"
+                />
+              </div>
+            )}
+
+            {errorMessage && (
+              <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                {errorMessage}
+              </p>
+            )}
+
+            {message && (
+              <p className="rounded-2xl border border-accent/20 bg-accent/10 px-4 py-3 text-sm text-accent">
+                {message}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={handleEmailAuth}
+              disabled={formLoading || !!loading}
+              className="flex w-full items-center justify-center rounded-2xl bg-accent px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-accent/90 disabled:opacity-50"
+            >
+              {formLoading
+                ? authMode === "signup"
+                  ? "Creating account..."
+                  : "Signing in..."
+                : authMode === "signup"
+                  ? "Create account"
+                  : "Sign in with email"}
+            </button>
+          </div>
+
           <div className="space-y-4">
             <button
               onClick={() => handleOAuthLogin("github")}
-              disabled={!!loading}
+              disabled={!!loading || formLoading}
               className="flex w-full items-center justify-center gap-3 rounded-2xl border border-border bg-background px-4 py-3.5 text-sm font-semibold text-foreground transition-colors hover:bg-surface disabled:opacity-50"
             >
               {loading === 'github' ? (
@@ -57,7 +265,7 @@ export default function LoginPage() {
             
             <button
               onClick={() => handleOAuthLogin("google")}
-              disabled={!!loading}
+              disabled={!!loading || formLoading}
               className="flex w-full items-center justify-center gap-3 rounded-2xl border border-border bg-background px-4 py-3.5 text-sm font-semibold text-foreground transition-colors hover:bg-surface disabled:opacity-50"
             >
               {loading === 'google' ? (
@@ -75,7 +283,7 @@ export default function LoginPage() {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-surface-strong px-2 text-muted-foreground text-[10px] tracking-wider">
-                Or skip for testing
+                Demo shortcut
               </span>
             </div>
           </div>
