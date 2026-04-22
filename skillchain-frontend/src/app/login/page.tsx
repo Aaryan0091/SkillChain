@@ -1,13 +1,166 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Mail, Lock, ShieldCheck, Sparkles, Zap, ArrowRight } from "lucide-react";
+import { User, Mail, Lock, ShieldCheck, Sparkles, Zap, ArrowRight, GitBranch, Terminal, Award, CheckCircle2 } from "lucide-react";
 import BackButton from "@/components/BackButton";
 import LiquidEther from "@/components/LiquidEther";
 import { createClient } from "@/utils/supabase/client";
+
+const AnimaticIllustration = () => {
+  const [step, setStep] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setStep((prev) => (prev + 1) % 3);
+    }, 3500);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="relative w-full max-w-[320px] aspect-square flex items-center justify-center">
+      {/* Dynamic Background Halo */}
+      <motion.div 
+        animate={{ 
+          backgroundColor: step === 0 ? 'rgba(59, 130, 246, 0.1)' : step === 1 ? 'rgba(168, 85, 247, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+          scale: [1, 1.05, 1],
+        }}
+        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+        className="absolute inset-0 rounded-full blur-[60px]"
+      />
+
+      <AnimatePresence mode="wait">
+        {step === 0 && (
+          <motion.div
+            key="step-0"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="relative w-full max-w-[280px] rounded-2xl border border-white/10 bg-[#0f172a]/80 p-6 shadow-2xl backdrop-blur-md"
+          >
+            <div className="mb-4 flex items-center gap-3 border-b border-white/5 pb-4">
+              <Terminal className="h-5 w-5 text-blue-400" />
+              <span className="text-sm font-mono text-white/80">workspace.ts</span>
+            </div>
+            <div className="space-y-3">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: "100%" }}
+                transition={{ duration: 1, delay: 0.2, ease: "easeOut" }}
+                className="h-2 rounded-full bg-blue-500/40"
+              />
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: "75%" }}
+                transition={{ duration: 1, delay: 0.6, ease: "easeOut" }}
+                className="h-2 rounded-full bg-blue-500/40"
+              />
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: "90%" }}
+                transition={{ duration: 1, delay: 1, ease: "easeOut" }}
+                className="h-2 rounded-full bg-blue-500/20"
+              />
+            </div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 1.5, duration: 0.5 }}
+              className="mt-6 flex items-center gap-2 rounded-lg bg-blue-500/10 p-2 text-xs text-blue-300 font-mono"
+            >
+              <GitBranch className="h-4 w-4" />
+              <span>Commit: build feature</span>
+            </motion.div>
+          </motion.div>
+        )}
+
+        {step === 1 && (
+          <motion.div
+            key="step-1"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="relative w-full max-w-[280px] rounded-2xl border border-purple-500/20 bg-[#0f172a]/80 p-6 shadow-2xl backdrop-blur-md overflow-hidden"
+          >
+            {/* Scanning Line */}
+            <motion.div
+              animate={{ top: ["-10%", "110%"] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+              className="absolute left-0 right-0 h-[2px] bg-purple-500 shadow-[0_0_15px_rgba(168,85,247,0.8)] z-20"
+            />
+            
+            <div className="mb-4 flex items-center justify-between border-b border-white/5 pb-4">
+              <div className="flex items-center gap-3">
+                <ShieldCheck className="h-5 w-5 text-purple-400" />
+                <span className="text-sm font-mono text-white/80">AI Analysis</span>
+              </div>
+              <motion.div 
+                animate={{ rotate: 360 }}
+                transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+              >
+                <Sparkles className="h-4 w-4 text-purple-400/50" />
+              </motion.div>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-4 w-4 text-purple-500" />
+                <span className="text-xs text-white/70">Authenticity Verified</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-4 w-4 text-purple-500" />
+                <span className="text-xs text-white/70">Syntax & Logic Scored</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-4 w-4 text-purple-500" />
+                <span className="text-xs text-white/70">Plagiarism Check: Pass</span>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {step === 2 && (
+          <motion.div
+            key="step-2"
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.95 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="relative w-full max-w-[280px] rounded-2xl border border-emerald-500/30 bg-gradient-to-b from-emerald-500/10 to-[#0f172a]/80 p-6 shadow-2xl backdrop-blur-md text-center"
+          >
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 ring-4 ring-emerald-500/10">
+              <Award className="h-8 w-8 text-emerald-400" />
+            </div>
+            <h3 className="text-lg font-bold text-white">Skill Verified</h3>
+            <p className="mt-2 text-xs text-emerald-200/70 font-mono bg-emerald-500/10 rounded-lg p-2">
+              Tx: 0x8f...3a9b
+            </p>
+            
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              className="mt-6 w-full rounded-xl bg-emerald-500/20 py-2 text-sm font-semibold text-emerald-400 border border-emerald-500/50 cursor-default"
+            >
+              Certificate Minted
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Dots Indicator */}
+      <div className="absolute -bottom-8 flex gap-2">
+        {[0, 1, 2].map((i) => (
+          <div 
+            key={i} 
+            className={`h-1.5 rounded-full transition-all duration-300 ${step === i ? 'w-6 bg-white' : 'w-1.5 bg-white/20'}`} 
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
 
 export default function LoginPage() {
   const router = useRouter();
@@ -148,43 +301,49 @@ export default function LoginPage() {
         <div className="grid w-full overflow-hidden rounded-[2.5rem] border border-white/10 bg-surface/40 shadow-2xl backdrop-blur-2xl lg:grid-cols-2">
           
           {/* Left Column: Branding (hidden on mobile) */}
-          <div className="relative hidden flex-col justify-between overflow-hidden bg-gradient-to-br from-white/5 to-transparent p-12 lg:flex">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(52,211,153,0.15),transparent)] pointer-events-none" />
+          <div className="relative hidden w-full flex-col justify-between overflow-hidden bg-background/60 p-10 lg:flex lg:w-full border-r border-white/5">
+            {/* Background elements */}
+            <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-accent/10 blur-[120px] pointer-events-none" />
+            <div className="absolute -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
             
             <div className="relative z-10">
-              <div className="mb-8 inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-accent/20 border border-accent/30 shadow-[0_0_40px_rgba(52,211,153,0.3)] backdrop-blur-md">
-                <Zap className="h-8 w-8 text-accent" />
+              <div className="mb-6 inline-flex items-center gap-3 transition-opacity">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-emerald-500 shadow-lg shadow-accent/20">
+                   <Zap className="h-6 w-6 text-[#0f172a]" />
+                </div>
+                <span className="text-2xl font-black tracking-tight text-white">SkillChain</span>
               </div>
-              <h1 className="text-4xl font-extrabold tracking-tight text-white xl:text-5xl">
-                Unlock your true <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-emerald-400">worth.</span>
+
+              <h1 className="text-4xl font-extrabold tracking-tight text-white xl:text-5xl mt-6">
+                Your code is <br/>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-emerald-400">your resume.</span>
               </h1>
-              <p className="mt-6 text-lg tracking-wide text-muted/90 max-w-sm leading-relaxed">
-                Join top developers proving their skills through on-chain verified code analysis.
+              <p className="mt-4 text-base text-muted/90 max-w-sm leading-relaxed font-normal">
+                Forget traditional interviews. Connect your GitHub, let AI verify your real-world commits, and instantly showcase your true capabilities to top teams.
               </p>
-              
-              <div className="mt-12 space-y-6">
-                <div className="flex items-center gap-4 text-sm font-medium text-muted transition-colors hover:text-white">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 border border-white/10 shadow-inner">
-                    <ShieldCheck className="h-6 w-6 text-accent" />
-                  </div>
-                  Anti-cheat verification backed by AI
-                </div>
-                <div className="flex items-center gap-4 text-sm font-medium text-muted transition-colors hover:text-white">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/5 border border-white/10 shadow-inner">
-                    <Sparkles className="h-6 w-6 text-accent" />
-                  </div>
-                  Stand out to top tech recruiters
-                </div>
-              </div>
             </div>
 
-            <div className="relative z-10 w-full mt-12 rounded-2xl border border-white/10 bg-background/40 p-4 backdrop-blur-md">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="h-2 w-2 rounded-full bg-accent animate-pulse" />
-                  <span className="text-xs font-mono font-medium text-accent">SYSTEM STATUS</span>
+            {/* Animatic Section */}
+            <div className="relative z-10 w-full flex-1 min-h-[300px] mt-8 mb-4 flex items-center justify-center">
+               <AnimaticIllustration />
+            </div>
+
+            {/* Testimonial / Humanity touch */}
+            <div className="relative z-10 mt-auto">
+              <div className="rounded-2xl border border-white/5 bg-white/5 p-5 backdrop-blur-md transition-all hover:bg-white/10 cursor-default shadow-xl">
+                <div className="flex items-start gap-4">
+                  <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-emerald-500 to-blue-500 p-[2px]">
+                    <div className="h-full w-full rounded-full bg-[#0f172a] flex items-center justify-center">
+                       <User className="h-5 w-5 text-white/70" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium leading-relaxed text-white/90 italic">
+                      "SkillChain completely changed how I hire. Seeing verified proof of a developer's specific commits gives me absolute confidence."
+                    </p>
+                    <p className="mt-2 text-xs font-semibold text-emerald-400">— Sarah J., Engineering Leader</p>
+                  </div>
                 </div>
-                <span className="text-xs font-mono text-muted">ALL SYSTEMS NOMINAL</span>
               </div>
             </div>
           </div>
