@@ -8,7 +8,6 @@ import {
   GitCommit, 
   Activity,
   User,
-  Hash,
   Clock,
   TrendingUp,
   Trophy,
@@ -221,7 +220,7 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
                 {certificate.owner}
               </h1>
               <p className="mt-3 text-sm font-medium text-muted flex items-center gap-2">
-                <Hash className="h-4 w-4 opacity-60" /> {normalizedId} <span className="opacity-40 text-xs mx-1">●</span> <span className="text-foreground/80">@{certificate.username}</span>
+                {normalizedId} <span className="opacity-40 text-xs mx-1">●</span> <span className="text-foreground/80">@{certificate.username}</span>
               </p>
             </div>
           </div>

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Mail, Lock, ShieldCheck, Sparkles, Zap, ArrowRight, GitBranch, Terminal, Award, CheckCircle2 } from "lucide-react";
+import { User, Mail, Lock, ShieldCheck, Sparkles, Zap, ArrowRight, GitBranch, Terminal, Award, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import BackButton from "@/components/BackButton";
 import LiquidEther from "@/components/LiquidEther";
 import { createClient } from "@/utils/supabase/client";
@@ -173,6 +173,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const supabase = createClient();
 
   const handleOAuthLogin = async (provider: 'github' | 'google') => {
@@ -444,12 +446,19 @@ export default function LoginPage() {
                   </div>
                   <input
                     id="password"
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={authMode === "signup" ? "Create a password" : "Enter password"}
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 py-3.5 pl-11 pr-4 text-sm text-white placeholder-muted-foreground outline-none transition-all focus:border-accent focus:bg-white/10 focus:ring-1 focus:ring-accent"
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 py-3.5 pl-11 pr-12 text-sm text-white placeholder-muted-foreground outline-none transition-all focus:border-accent focus:bg-white/10 focus:ring-1 focus:ring-accent"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-muted-foreground hover:text-white transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
                 </div>
 
                 <AnimatePresence mode="wait">
@@ -467,12 +476,19 @@ export default function LoginPage() {
                       </div>
                       <input
                         id="confirmPassword"
-                        type="password"
+                        type={showConfirmPassword ? "text" : "password"}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="Confirm password"
-                        className="w-full rounded-2xl border border-white/10 bg-white/5 py-3.5 pl-11 pr-4 text-sm text-white placeholder-muted-foreground outline-none transition-all focus:border-accent focus:bg-white/10 focus:ring-1 focus:ring-accent"
+                        className="w-full rounded-2xl border border-white/10 bg-white/5 py-3.5 pl-11 pr-12 text-sm text-white placeholder-muted-foreground outline-none transition-all focus:border-accent focus:bg-white/10 focus:ring-1 focus:ring-accent"
                       />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-muted-foreground hover:text-white transition-colors"
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
                     </motion.div>
                   )}
                 </AnimatePresence>
