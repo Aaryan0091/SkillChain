@@ -54,7 +54,7 @@ export default async function DashboardLayout({
           </Link>
         </nav>
         <div className="p-4 border-t border-border/50">
-          <div className="flex items-center gap-3 rounded-2xl bg-surface-strong/50 border border-border/30 p-3 backdrop-blur shadow-sm">
+          <Link href="/dashboard/profile" className="flex items-center gap-3 rounded-2xl bg-surface-strong/50 border border-border/30 p-3 backdrop-blur shadow-sm hover:bg-surface-strong hover:border-border transition-all cursor-pointer">
             <div className="h-9 w-9 rounded-full bg-gradient-to-br from-accent to-accent-strong text-white flex items-center justify-center font-bold shadow-inner">
               {avatarLetter}
             </div>
@@ -62,7 +62,7 @@ export default async function DashboardLayout({
               <p className="text-sm font-semibold truncate leading-tight">{displayName}</p>
               <p className="text-[11px] text-muted truncate mt-0.5">{displayEmail}</p>
             </div>
-          </div>
+          </Link>
         </div>
       </aside>
 
