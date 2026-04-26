@@ -300,6 +300,8 @@ The first implementation uses:
 - Lightweight keyword/token NLP
 - Weighted scoring
 
+For reliable local testing, configure `GITHUB_TOKEN` in `skillchain-backend/.env`. Without a token, GitHub's unauthenticated API quota is small and can be exhausted quickly while reading repository metadata, trees, and source files.
+
 It does not yet use:
 
 - OpenAI or another hosted LLM

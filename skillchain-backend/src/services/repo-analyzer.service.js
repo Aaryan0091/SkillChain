@@ -1,8 +1,8 @@
 const { fetchBlobText, fetchRepositorySnapshot } = require("./github.service");
 
-const MAX_FILES_TO_READ = 55;
+const MAX_FILES_TO_READ = 18;
 const MAX_FILE_BYTES = 120_000;
-const MAX_TOTAL_CHARS = 420_000;
+const MAX_TOTAL_CHARS = 180_000;
 
 const IGNORED_PATH_PARTS = new Set([
   ".git",
@@ -139,6 +139,10 @@ function selectFilesForContent(files) {
     .filter((file) => !file.size || file.size <= MAX_FILE_BYTES)
     .map((file) => {
       const kind = classifyFile(file.path);
+      const depth = file.path.split("/").length - 1;
+      const lowerPath = file.path.toLowerCase();
+      const rootBoost = depth === 0 ? 35 : 0;
+      const appBoost = /^(src|app|pages|routes|server|api)\//.test(lowerPath) ? 10 : 0;
       const weights = {
         readme: 100,
         manifest: 95,
@@ -154,7 +158,7 @@ function selectFilesForContent(files) {
       return {
         ...file,
         kind,
-        weight: weights[kind] || 40,
+        weight: (weights[kind] || 40) + rootBoost + appBoost - depth,
       };
     });
 

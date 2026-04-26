@@ -52,7 +52,19 @@ async function githubRequest(path) {
     }
 
     if (response.status === 403) {
-      throw new Error("GitHub API rate limit or access restriction reached.");
+      const remaining = response.headers.get("x-ratelimit-remaining");
+      const reset = response.headers.get("x-ratelimit-reset");
+      const resetAt = reset
+        ? new Date(Number(reset) * 1000).toLocaleTimeString()
+        : null;
+      const resetText = resetAt ? ` The unauthenticated limit resets around ${resetAt}.` : "";
+      const tokenText = env.githubToken
+        ? "GitHub denied this request even with the configured token."
+        : "Add a GITHUB_TOKEN in skillchain-backend/.env to increase the GitHub API limit.";
+
+      throw new Error(
+        `GitHub API rate limit or access restriction reached.${resetText} Remaining requests: ${remaining || "0"}. ${tokenText}`
+      );
     }
 
     throw new Error(`GitHub API request failed with status ${response.status}.`);
