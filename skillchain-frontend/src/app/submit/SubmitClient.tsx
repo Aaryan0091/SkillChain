@@ -7,10 +7,57 @@ import {
   Layers, Lock, Sparkles, Database, GitBranch, Search, Activity
 } from "lucide-react";
 import { useState } from "react";
+import { getPublicEnv } from "@/lib/env";
+
+type AnalysisResult = {
+  analysisVersion: string;
+  repo: {
+    fullName: string;
+    htmlUrl: string;
+    branch: string;
+  };
+  basis: {
+    fileStats: {
+      totalFiles: number;
+      sourceFiles: number;
+      testFiles: number;
+      docsFiles: number;
+      backendFiles: number;
+      frontendFiles: number;
+    };
+    selectedFiles: {
+      path: string;
+      kind: string;
+    }[];
+  };
+  deterministic: {
+    frameworks: string[];
+    readme: {
+      exists: boolean;
+      lines: number;
+      words: number;
+      score: number;
+      note: string;
+    };
+    signals: Record<string, boolean>;
+  };
+  nlp: {
+    projectType: string;
+    skillEvidence: string[];
+    architectureSummary: string;
+    strengths: string[];
+    risks: string[];
+  };
+  scores: Record<string, number>;
+  summary: string;
+};
 
 export default function SubmitClient() {
   const [url, setUrl] = useState("");
+  const [branch, setBranch] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
 
   const container = {
     hidden: { opacity: 0 },
@@ -25,14 +72,46 @@ export default function SubmitClient() {
     show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url) return;
+
     setIsSubmitting(true);
-    // Simulate submission
-    setTimeout(() => {
+    setError("");
+    setAnalysis(null);
+
+    try {
+      const { apiBaseUrl } = getPublicEnv();
+      const baseUrl = apiBaseUrl.replace(/\/$/, "");
+      const projectsUrl = baseUrl.endsWith("/api/v1")
+        ? `${baseUrl}/projects`
+        : `${baseUrl}/api/v1/projects`;
+      const response = await fetch(projectsUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          repoUrl: url,
+          branch: branch || undefined,
+        }),
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Repository analysis failed.");
+      }
+
+      setAnalysis(result.data.analysis);
+    } catch (caughtError) {
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "Repository analysis failed."
+      );
+    } finally {
       setIsSubmitting(false);
-    }, 2000);
+    }
   };
 
   return (
@@ -106,6 +185,8 @@ export default function SubmitClient() {
                     <input
                       id="branch"
                       type="text"
+                      value={branch}
+                      onChange={(e) => setBranch(e.target.value)}
                       placeholder="main"
                       className="w-full bg-background/50 border border-white/10 rounded-xl py-3.5 pl-11 pr-4 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent transition-all"
                     />
@@ -140,6 +221,12 @@ export default function SubmitClient() {
                 <Lock className="h-3.5 w-3.5" />
                 <span>Read-only access. We never store your raw code.</span>
               </div>
+
+              {error ? (
+                <div className="mt-5 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
+                  {error}
+                </div>
+              ) : null}
             </div>
           </motion.div>
         </div>
@@ -266,6 +353,121 @@ export default function SubmitClient() {
 
         </div>
       </motion.div>
+
+      {analysis ? (
+        <motion.section
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="rounded-[2rem] border border-white/10 bg-surface/50 p-8 backdrop-blur-xl shadow-xl"
+        >
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-400">
+                Hybrid NLP Result
+              </p>
+              <h2 className="mt-2 text-2xl font-bold text-white">
+                {analysis.repo.fullName}
+              </h2>
+              <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                {analysis.summary}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-muted-foreground">
+              Branch: <span className="font-semibold text-white">{analysis.repo.branch}</span>
+            </div>
+          </div>
+
+          <div className="mt-8 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-7">
+            {Object.entries(analysis.scores).map(([label, score]) => (
+              <div key={label} className="rounded-xl border border-white/10 bg-background/40 p-4">
+                <p className="text-xs capitalize text-muted-foreground">
+                  {label.replace(/([A-Z])/g, " $1")}
+                </p>
+                <p className="mt-2 text-2xl font-black text-white">{score}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 grid grid-cols-1 gap-5 lg:grid-cols-3">
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                What Was Analyzed
+              </h3>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <span className="text-muted-foreground">Total files</span>
+                <span className="font-semibold text-white">{analysis.basis.fileStats.totalFiles}</span>
+                <span className="text-muted-foreground">Source files</span>
+                <span className="font-semibold text-white">{analysis.basis.fileStats.sourceFiles}</span>
+                <span className="text-muted-foreground">Test files</span>
+                <span className="font-semibold text-white">{analysis.basis.fileStats.testFiles}</span>
+                <span className="text-muted-foreground">Docs files</span>
+                <span className="font-semibold text-white">{analysis.basis.fileStats.docsFiles}</span>
+                <span className="text-muted-foreground">Selected files</span>
+                <span className="font-semibold text-white">{analysis.basis.selectedFiles.length}</span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                NLP Interpretation
+              </h3>
+              <p className="mt-4 text-sm capitalize text-emerald-300">
+                {analysis.nlp.projectType}
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                {analysis.nlp.architectureSummary}
+              </p>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+              <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+                README Signal
+              </h3>
+              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                <span className="text-muted-foreground">Lines</span>
+                <span className="font-semibold text-white">{analysis.deterministic.readme.lines}</span>
+                <span className="text-muted-foreground">Words</span>
+                <span className="font-semibold text-white">{analysis.deterministic.readme.words}</span>
+                <span className="text-muted-foreground">Doc score</span>
+                <span className="font-semibold text-white">{analysis.deterministic.readme.score}</span>
+              </div>
+              <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+                {analysis.deterministic.readme.note}
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 gap-5 lg:grid-cols-3">
+            <EvidenceList title="Detected Skills" items={analysis.nlp.skillEvidence} />
+            <EvidenceList title="Strengths" items={analysis.nlp.strengths} />
+            <EvidenceList title="Risks" items={analysis.nlp.risks} />
+          </div>
+        </motion.section>
+      ) : null}
+    </div>
+  );
+}
+
+function EvidenceList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-5">
+      <h3 className="text-sm font-bold uppercase tracking-wider text-white">
+        {title}
+      </h3>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {items.length > 0 ? (
+          items.slice(0, 10).map((item) => (
+            <span
+              key={item}
+              className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-100"
+            >
+              {item}
+            </span>
+          ))
+        ) : (
+          <p className="text-sm text-muted-foreground">No strong evidence detected.</p>
+        )}
+      </div>
     </div>
   );
 }

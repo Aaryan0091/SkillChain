@@ -1,4 +1,5 @@
 const express = require("express");
+const { analyzeRepository } = require("../services/repo-analyzer.service");
 
 const router = express.Router();
 
@@ -10,8 +11,8 @@ router.get("/", (_req, res) => {
   });
 });
 
-router.post("/", (req, res) => {
-  const { repoUrl } = req.body || {};
+router.post("/", async (req, res) => {
+  const { repoUrl, branch } = req.body || {};
 
   if (!repoUrl) {
     return res.status(400).json({
@@ -20,14 +21,24 @@ router.post("/", (req, res) => {
     });
   }
 
-  return res.status(202).json({
-    success: true,
-    message: "Repository submission accepted for future analysis pipeline.",
-    data: {
-      repoUrl,
-      status: "queued",
-    },
-  });
+  try {
+    const analysis = await analyzeRepository(repoUrl, branch);
+
+    return res.status(200).json({
+      success: true,
+      message: "Repository analyzed with the hybrid NLP pipeline.",
+      data: {
+        repoUrl,
+        status: "completed",
+        analysis,
+      },
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message || "Repository analysis failed.",
+    });
+  }
 });
 
 module.exports = router;
