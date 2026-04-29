@@ -6,7 +6,7 @@ import {
   ShieldCheck, Terminal, Code,
   Layers, Lock, Sparkles, Database, GitBranch, Search, Activity
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getPublicEnv } from "@/lib/env";
 
 type AnalysisResult = {
@@ -58,6 +58,14 @@ export default function SubmitClient() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  const [statusMessage, setStatusMessage] = useState("");
+  const analysisRef = useRef<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (analysis && analysisRef.current) {
+      analysisRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [analysis]);
 
   const container = {
     hidden: { opacity: 0 },
@@ -79,6 +87,7 @@ export default function SubmitClient() {
     setIsSubmitting(true);
     setError("");
     setAnalysis(null);
+    setStatusMessage("Connecting to the analyzer...");
 
     try {
       const { apiBaseUrl } = getPublicEnv();
@@ -86,6 +95,14 @@ export default function SubmitClient() {
       const projectsUrl = baseUrl.endsWith("/api/v1")
         ? `${baseUrl}/projects`
         : `${baseUrl}/api/v1/projects`;
+
+      console.info("[SkillChain] Starting repository analysis", {
+        repoUrl: url,
+        branch: branch || "default",
+        endpoint: projectsUrl,
+      });
+      setStatusMessage("Fetching GitHub metadata and repository files...");
+
       const response = await fetch(projectsUrl, {
         method: "POST",
         headers: {
@@ -96,6 +113,8 @@ export default function SubmitClient() {
           branch: branch || undefined,
         }),
       });
+
+      setStatusMessage("Scoring repository evidence...");
       const result = await response.json();
 
       if (!response.ok || !result.success) {
@@ -103,12 +122,16 @@ export default function SubmitClient() {
       }
 
       setAnalysis(result.data.analysis);
+      setStatusMessage("Analysis complete.");
+      console.info("[SkillChain] Repository analysis complete", result.data.analysis);
     } catch (caughtError) {
+      console.error("[SkillChain] Repository analysis failed", caughtError);
       setError(
         caughtError instanceof Error
           ? caughtError.message
           : "Repository analysis failed."
       );
+      setStatusMessage("");
     } finally {
       setIsSubmitting(false);
     }
@@ -222,9 +245,23 @@ export default function SubmitClient() {
                 <span>Read-only access. We never store your raw code.</span>
               </div>
 
+              {statusMessage ? (
+                <div className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
+                  {statusMessage}
+                </div>
+              ) : null}
+
               {error ? (
                 <div className="mt-5 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
                   {error}
+                </div>
+              ) : null}
+
+              {analysis ? (
+                <div className="mt-5 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-muted-foreground">
+                  Result ready for{" "}
+                  <span className="font-semibold text-white">{analysis.repo.fullName}</span>.
+                  The detailed analysis is shown below.
                 </div>
               ) : null}
             </div>
@@ -356,6 +393,7 @@ export default function SubmitClient() {
 
       {analysis ? (
         <motion.section
+          ref={analysisRef}
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           className="rounded-[2rem] border border-white/10 bg-surface/50 p-8 backdrop-blur-xl shadow-xl"
