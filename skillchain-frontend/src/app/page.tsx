@@ -199,7 +199,7 @@ export default function Home() {
           <motion.div 
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-100px" }}
+            viewport={{ once: false, margin: "-100px" }}
             transition={{ duration: 0.7 }}
             className="mb-16 text-center"
           >
@@ -210,6 +210,10 @@ export default function Home() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[300px]">
             {/* Large Card 1 */}
             <motion.div 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, margin: "-50px" }}
+              transition={{ duration: 0.5 }}
               whileHover={{ y: -5 }}
               className="md:col-span-2 group relative overflow-hidden rounded-[2.5rem] border border-border bg-surface p-8 backdrop-blur-md transition-all hover:border-accent/40"
             >
@@ -229,6 +233,10 @@ export default function Home() {
 
             {/* Small Card 1 */}
             <motion.div 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, margin: "-50px" }}
+              transition={{ duration: 0.5, delay: 0.1 }}
               whileHover={{ y: -5 }}
               className="group relative overflow-hidden rounded-[2.5rem] border border-border bg-surface p-8 backdrop-blur-md transition-all hover:border-accent-strong/40"
             >
@@ -248,6 +256,10 @@ export default function Home() {
 
             {/* Small Card 2 */}
             <motion.div 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, margin: "-50px" }}
+              transition={{ duration: 0.5, delay: 0.2 }}
               whileHover={{ y: -5 }}
               className="group relative overflow-hidden rounded-[2.5rem] border border-border bg-surface p-8 backdrop-blur-md transition-all hover:border-accent/40"
             >
@@ -264,6 +276,10 @@ export default function Home() {
 
             {/* Large Card 2 */}
             <motion.div 
+              initial={{ opacity: 0, y: 40 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, margin: "-50px" }}
+              transition={{ duration: 0.5, delay: 0.3 }}
               whileHover={{ y: -5 }}
               className="md:col-span-2 group relative overflow-hidden rounded-[2.5rem] border border-border bg-gradient-to-br from-surface to-surface-strong p-8 backdrop-blur-md transition-all hover:border-accent/40"
             >
@@ -288,9 +304,15 @@ export default function Home() {
         {/* HOW IT WORKS SECTION */}
         <section id="how-it-works" className="py-32 relative">
           <div className="absolute inset-0 bg-surface-strong/30 rounded-[3rem] -z-10" />
-          <div className="text-center mb-16">
+          <motion.div 
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, margin: "-100px" }}
+            transition={{ duration: 0.7 }}
+            className="text-center mb-16"
+          >
             <h2 className="text-3xl font-bold sm:text-5xl">From Repo to Resume in Minutes</h2>
-          </div>
+          </motion.div>
           
           <div className="grid md:grid-cols-3 gap-8 px-4 sm:px-8">
             {steps.map((step, idx) => (
@@ -298,7 +320,7 @@ export default function Home() {
                 key={step.step}
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
+                viewport={{ once: false, margin: "-50px" }}
                 transition={{ duration: 0.5, delay: idx * 0.2 }}
                 className="relative flex flex-col items-center text-center p-6"
               >
@@ -320,9 +342,10 @@ export default function Home() {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg h-full bg-accent/20 blur-[100px] pointer-events-none" />
             
             <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
+              initial={{ opacity: 0, y: 40, scale: 0.95 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              viewport={{ once: false, margin: "-50px" }}
+              transition={{ duration: 0.7 }}
               className="relative z-10 mx-auto max-w-2xl space-y-8"
             >
               <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">Ready to prove your skills?</h2>
@@ -344,7 +367,13 @@ export default function Home() {
       </main>
 
       {/* FOOTER */}
-      <footer className="border-t border-border bg-surface/50 py-10 backdrop-blur">
+      <motion.footer 
+        initial={{ opacity: 0, y: 30 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: false }}
+        transition={{ duration: 0.6 }}
+        className="border-t border-border bg-surface/50 py-10 backdrop-blur"
+      >
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-6 sm:flex-row lg:px-12">
           <div className="flex items-center gap-2">
             <Cpu className="h-5 w-5 text-accent" />
@@ -361,7 +390,7 @@ export default function Home() {
             <Link href="#" className="hover:text-foreground">Twitter</Link>
           </div>
         </div>
-      </footer>
+      </motion.footer>
     </div>
   );
 }
