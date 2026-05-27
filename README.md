@@ -79,6 +79,8 @@ Traditional resumes rely on self-claimed skills. SkillChain AI replaces that wit
 - `skillchain-backend` - Express API for auth integration, project intake, analysis orchestration, scoring, and certificate services
 - `supabase/schema.sql` - database schema for users, projects, metrics, scores, certificates, and analysis jobs
 
+`supabase/schema.sql` is the only canonical schema file for the project. Any schema changes should happen there so the frontend, backend, and Supabase stay aligned.
+
 ## Current Data Model
 
 The existing schema already supports the main platform flow:

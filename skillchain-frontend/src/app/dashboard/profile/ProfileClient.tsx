@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { 
   ShieldCheck, GitCommit, Award, Terminal, 
   Activity, Code, Zap, Calendar, Clock, 
@@ -23,6 +24,12 @@ interface ProfileClientProps {
 }
 
 export default function ProfileClient({ user, signOutAction }: ProfileClientProps) {
+  const [techStackAnimated, setTechStackAnimated] = useState(false);
+
+  useEffect(() => {
+    setTechStackAnimated(true);
+  }, []);
+
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -243,12 +250,15 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
                   </div>
                   <div className="h-3 w-full bg-[#0f172a]/80 rounded-full overflow-hidden border border-white/5 shadow-inner">
                     <motion.div 
-                      initial={{ width: 0 }}
+                      initial={techStackAnimated ? false : { width: 0 }}
                       animate={{ width: `${skill.score}%` }}
                       transition={{ duration: 1.5, delay: 0.5 + (index * 0.1), ease: "easeOut" }}
                       className={`h-full rounded-full ${skill.color} relative overflow-hidden`}
                     >
-                      <div className="absolute inset-0 bg-white/30 w-full animate-[shimmer_2s_infinite]" style={{ transform: 'translateX(-100%)' }} />
+                      <div
+                        className={`absolute inset-0 bg-white/25 w-full ${techStackAnimated ? "animate-[shimmer_2.4s_linear_1]" : ""}`}
+                        style={{ transform: "translateX(-100%)" }}
+                      />
                     </motion.div>
                   </div>
                 </div>

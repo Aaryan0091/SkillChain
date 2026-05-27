@@ -9,6 +9,18 @@ import BackButton from "@/components/BackButton";
 import LiquidEther from "@/components/LiquidEther";
 import { createClient } from "@/utils/supabase/client";
 
+function getAuthErrorMessage(error: unknown) {
+  if (error instanceof Error) {
+    if (error.message === "Failed to fetch") {
+      return "Could not reach Supabase. Check your internet connection and Supabase environment variables, then try again.";
+    }
+
+    return error.message;
+  }
+
+  return "Authentication failed. Please try again.";
+}
+
 const AnimaticIllustration = () => {
   const [step, setStep] = useState(0);
 
@@ -175,22 +187,29 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const supabase = createClient();
 
   const handleOAuthLogin = async (provider: 'github' | 'google') => {
     setMessage(null);
     setErrorMessage(null);
     setLoading(provider);
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
 
-    if (error) {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        console.error(error);
+        setErrorMessage(error.message);
+        setLoading(null);
+      }
+    } catch (error) {
       console.error(error);
-      setErrorMessage(error.message);
+      setErrorMessage(getAuthErrorMessage(error));
       setLoading(null);
     }
   };
@@ -223,10 +242,36 @@ export default function LoginPage() {
 
     setFormLoading(true);
 
-    if (authMode === "signin") {
-      const { error } = await supabase.auth.signInWithPassword({
+    try {
+      const supabase = createClient();
+
+      if (authMode === "signin") {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          setErrorMessage(error.message);
+          setFormLoading(false);
+          return;
+        }
+
+        router.push("/dashboard");
+        router.refresh();
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          data: {
+            full_name: name.trim(),
+            name: name.trim(),
+          },
+        },
       });
 
       if (error) {
@@ -235,37 +280,19 @@ export default function LoginPage() {
         return;
       }
 
-      router.push("/dashboard");
-      router.refresh();
-      return;
-    }
+      if (data.session) {
+        router.push("/dashboard");
+        router.refresh();
+        return;
+      }
 
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-        data: {
-          full_name: name.trim(),
-          name: name.trim(),
-        },
-      },
-    });
-
-    if (error) {
-      setErrorMessage(error.message);
+      setMessage("Account created. Check your email to confirm your account, then sign in.");
       setFormLoading(false);
-      return;
+    } catch (error) {
+      console.error(error);
+      setErrorMessage(getAuthErrorMessage(error));
+      setFormLoading(false);
     }
-
-    if (data.session) {
-      router.push("/dashboard");
-      router.refresh();
-      return;
-    }
-
-    setMessage("Account created. Check your email to confirm your account, then sign in.");
-    setFormLoading(false);
   };
 
   const variants = {
