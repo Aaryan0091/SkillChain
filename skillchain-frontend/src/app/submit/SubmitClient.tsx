@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getPublicEnv } from "@/lib/env";
+import { createClient } from "@/utils/supabase/client";
 
 type AnalysisResult = {
   analysisVersion: string;
@@ -90,6 +91,15 @@ export default function SubmitClient() {
     setStatusMessage("Connecting to the analyzer...");
 
     try {
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session?.access_token) {
+        throw new Error("Please sign in before starting a repository analysis.");
+      }
+
       const { apiBaseUrl } = getPublicEnv();
       const baseUrl = apiBaseUrl.replace(/\/$/, "");
       const projectsUrl = baseUrl.endsWith("/api/v1")
@@ -106,6 +116,7 @@ export default function SubmitClient() {
       const response = await fetch(projectsUrl, {
         method: "POST",
         headers: {
+          Authorization: `Bearer ${session.access_token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -138,17 +149,17 @@ export default function SubmitClient() {
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-8 pb-10">
+    <div className="mx-auto w-full max-w-6xl space-y-6 pb-8 sm:space-y-8 sm:pb-10">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
         <div className="flex items-center gap-2 text-emerald-400 mb-2">
           <Terminal className="h-5 w-5" />
           <span className="text-sm font-semibold tracking-wider uppercase">Repository Analysis</span>
         </div>
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white">
+        <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
           Connect your <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-emerald-400">GitHub</span>
         </h1>
-        <p className="text-muted-foreground max-w-2xl text-lg mt-2">
+        <p className="mt-2 max-w-2xl text-base text-muted-foreground sm:text-lg">
           Submit your codebase for an AI-driven architectural deep dive. We extract verifiable skills directly from your commit history.
         </p>
       </motion.div>
@@ -157,11 +168,11 @@ export default function SubmitClient() {
         variants={container}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8"
+        className="mt-6 grid grid-cols-1 gap-6 lg:mt-8 lg:grid-cols-12 lg:gap-8"
       >
         {/* Left Column - Submission Form */}
         <div className="lg:col-span-5 space-y-8">
-          <motion.div variants={item} className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-surface/40 p-8 shadow-2xl backdrop-blur-xl">
+          <motion.div variants={item} className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-surface/40 p-5 shadow-2xl backdrop-blur-xl sm:p-6 lg:p-8">
             {/* Background Glow */}
             <div className="absolute -top-20 -right-20 w-64 h-64 bg-accent/20 rounded-full blur-[80px] pointer-events-none" />
             <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-emerald-500/10 rounded-full blur-[80px] pointer-events-none" />

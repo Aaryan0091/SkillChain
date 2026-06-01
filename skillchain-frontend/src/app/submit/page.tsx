@@ -3,10 +3,10 @@ import SubmitClient from "./SubmitClient";
 
 export default function SubmitPage() {
   return (
-    <main className="flex min-h-screen w-full flex-col px-6 py-10 pt-12 sm:px-10 sm:pt-16 relative overflow-hidden">
-      <div className="w-full max-w-6xl mx-auto mb-4 relative z-10 flex items-center justify-between">
+    <main className="app-shell">
+      <div className="app-container mb-4 flex items-center justify-between">
         <BackButton />
-        <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-6">
+        <div className="mb-4 hidden items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:flex">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -15,7 +15,7 @@ export default function SubmitPage() {
         </div>
       </div>
       
-      <div className="relative z-10 w-full">
+      <div className="app-container">
         <SubmitClient />
       </div>
 

@@ -1,12 +1,9 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/utils/supabase/server";
+import { createClient, getSessionUser } from "@/utils/supabase/server";
 import ProfileClient from "./ProfileClient";
 
 export default async function ProfilePage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser();
 
   if (!user) {
     redirect("/login");
@@ -57,7 +54,7 @@ export default async function ProfilePage() {
   };
 
   return (
-    <main className="w-full min-h-screen p-4 sm:p-8 pt-4 lg:p-10 lg:pt-4">
+    <main className="min-h-screen w-full px-4 pt-4 pb-10 sm:px-6 sm:pb-12 lg:px-8 lg:pb-14">
       <ProfileClient user={userData} signOutAction={signOut} />
     </main>
   );

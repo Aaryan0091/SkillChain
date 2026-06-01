@@ -32,7 +32,7 @@ const AnimaticIllustration = () => {
   }, []);
 
   return (
-    <div className="relative w-full max-w-[320px] aspect-square flex items-center justify-center">
+    <div className="relative flex w-full max-w-[280px] aspect-square items-center justify-center xl:max-w-[300px]">
       {/* Dynamic Background Halo */}
       <motion.div 
         animate={{ 
@@ -51,7 +51,7 @@ const AnimaticIllustration = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="relative w-full max-w-[280px] rounded-2xl border border-white/10 bg-[#0f172a]/80 p-6 shadow-2xl backdrop-blur-md"
+            className="relative w-full max-w-[250px] rounded-2xl border border-white/10 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur-md xl:max-w-[270px]"
           >
             <div className="mb-4 flex items-center gap-3 border-b border-white/5 pb-4">
               <Terminal className="h-5 w-5 text-blue-400" />
@@ -96,7 +96,7 @@ const AnimaticIllustration = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="relative w-full max-w-[280px] rounded-2xl border border-purple-500/20 bg-[#0f172a]/80 p-6 shadow-2xl backdrop-blur-md overflow-hidden"
+            className="relative w-full max-w-[250px] overflow-hidden rounded-2xl border border-purple-500/20 bg-[#0f172a]/80 p-5 shadow-2xl backdrop-blur-md xl:max-w-[270px]"
           >
             {/* Scanning Line */}
             <motion.div
@@ -141,7 +141,7 @@ const AnimaticIllustration = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -20, scale: 0.95 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="relative w-full max-w-[280px] rounded-2xl border border-emerald-500/30 bg-gradient-to-b from-emerald-500/10 to-[#0f172a]/80 p-6 shadow-2xl backdrop-blur-md text-center"
+            className="relative w-full max-w-[250px] rounded-2xl border border-emerald-500/30 bg-gradient-to-b from-emerald-500/10 to-[#0f172a]/80 p-5 text-center shadow-2xl backdrop-blur-md xl:max-w-[270px]"
           >
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/20 ring-4 ring-emerald-500/10">
               <Award className="h-8 w-8 text-emerald-400" />
@@ -162,7 +162,7 @@ const AnimaticIllustration = () => {
       </AnimatePresence>
 
       {/* Dots Indicator */}
-      <div className="absolute -bottom-8 flex gap-2">
+      <div className="absolute -bottom-6 flex gap-2">
         {[0, 1, 2].map((i) => (
           <div 
             key={i} 
@@ -302,7 +302,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center overflow-hidden bg-background">
+    <div className="relative h-screen w-full overflow-hidden bg-background">
       {/* Background Effects */}
       <div className="fixed inset-0 z-[0] pointer-events-none opacity-40">
         <LiquidEther
@@ -322,44 +322,44 @@ export default function LoginPage() {
       <div className="absolute inset-0 z-[2] bg-[radial-gradient(circle_at_50%_0%,rgba(52,211,153,0.1),transparent_70%)] pointer-events-none" />
 
       {/* Main Container */}
-      <main className="relative z-10 w-full max-w-5xl p-4 sm:p-8">
-        <div className="mb-6">
+      <main className="relative z-10 mx-auto flex h-full w-full max-w-6xl flex-col justify-center px-3 py-3 sm:px-5 sm:py-4 lg:px-6">
+        <div className="mb-3 shrink-0 sm:mb-4">
           <BackButton />
         </div>
 
-        <div className="grid w-full overflow-hidden rounded-[2.5rem] border border-white/10 bg-surface/40 shadow-2xl backdrop-blur-2xl lg:grid-cols-2">
+        <div className="grid min-h-0 flex-1 w-full overflow-hidden rounded-[2rem] border border-white/10 bg-surface/40 shadow-2xl backdrop-blur-2xl lg:grid-cols-[0.96fr_1.04fr]">
           
           {/* Left Column: Branding (hidden on mobile) */}
-          <div className="relative hidden w-full flex-col justify-between overflow-hidden bg-background/60 p-10 lg:flex lg:w-full border-r border-white/5">
+          <div className="relative hidden w-full flex-col justify-between overflow-hidden border-r border-white/5 bg-background/60 p-7 xl:p-8 lg:flex lg:w-full">
             {/* Background elements */}
             <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-accent/10 blur-[120px] pointer-events-none" />
             <div className="absolute -bottom-40 -right-40 h-[500px] w-[500px] rounded-full bg-blue-500/10 blur-[120px] pointer-events-none" />
             
             <div className="relative z-10">
-              <div className="mb-6 inline-flex items-center gap-3 transition-opacity">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-emerald-500 shadow-lg shadow-accent/20">
-                   <Zap className="h-6 w-6 text-[#0f172a]" />
+              <div className="mb-4 inline-flex items-center gap-3 transition-opacity">
+                <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-emerald-500 shadow-lg shadow-accent/20">
+                   <Zap className="h-5 w-5 text-[#0f172a]" />
                 </div>
-                <span className="text-2xl font-black tracking-tight text-white">SkillChain</span>
+                <span className="text-xl font-black tracking-tight text-white">SkillChain</span>
               </div>
 
-              <h1 className="text-4xl font-extrabold tracking-tight text-white xl:text-5xl mt-6">
+              <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-white xl:text-4xl">
                 Your code is <br/>
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-emerald-400">your resume.</span>
               </h1>
-              <p className="mt-4 text-base text-muted/90 max-w-sm leading-relaxed font-normal">
+              <p className="mt-3 max-w-sm text-sm leading-relaxed text-muted/90 font-normal xl:text-[15px]">
                 Forget traditional interviews. Connect your GitHub, let AI verify your real-world commits, and instantly showcase your true capabilities to top teams.
               </p>
             </div>
 
             {/* Animatic Section */}
-            <div className="relative z-10 w-full flex-1 min-h-[300px] mt-8 mb-4 flex items-center justify-center">
+            <div className="relative z-10 mt-4 mb-2 flex min-h-[220px] w-full flex-1 items-center justify-center xl:min-h-[250px]">
                <AnimaticIllustration />
             </div>
 
             {/* Testimonial / Humanity touch */}
-            <div className="relative z-10 mt-auto">
-              <div className="rounded-2xl border border-white/5 bg-white/5 p-5 backdrop-blur-md transition-all hover:bg-white/10 cursor-default shadow-xl">
+            <div className="relative z-10 mt-auto hidden xl:block">
+              <div className="cursor-default rounded-2xl border border-white/5 bg-white/5 p-4 shadow-xl backdrop-blur-md transition-all hover:bg-white/10">
                 <div className="flex items-start gap-4">
                   <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-emerald-500 to-blue-500 p-[2px]">
                     <div className="h-full w-full rounded-full bg-[#0f172a] flex items-center justify-center">
@@ -367,7 +367,7 @@ export default function LoginPage() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-sm font-medium leading-relaxed text-white/90 italic">
+                    <p className="text-xs font-medium leading-relaxed text-white/90 italic">
                       "SkillChain completely changed how I hire. Seeing verified proof of a developer's specific commits gives me absolute confidence."
                     </p>
                     <p className="mt-2 text-xs font-semibold text-emerald-400">— Sarah J., Engineering Leader</p>
@@ -378,14 +378,14 @@ export default function LoginPage() {
           </div>
 
           {/* Right Column: Auth Form */}
-          <div className="flex flex-col justify-center bg-background/50 p-8 sm:p-12 lg:border-l lg:border-white/10">
+          <div className="flex min-h-0 flex-col justify-center bg-background/50 p-5 sm:p-6 lg:border-l lg:border-white/10 xl:p-8">
             <div className="mx-auto w-full max-w-md">
               
-              <div className="mb-8 text-center lg:text-left">
-                <h2 className="text-3xl font-bold tracking-tight text-white">
+              <div className="mb-5 text-center lg:text-left">
+                <h2 className="text-2xl font-bold tracking-tight text-white xl:text-3xl">
                   {authMode === "signin" ? "Welcome back" : "Create an account"}
                 </h2>
-                <p className="mt-2 text-sm text-muted">
+                <p className="mt-1.5 text-sm text-muted">
                   {authMode === "signin" 
                     ? "Enter your credentials to access your dashboard." 
                     : "Fill in the details below to get started."}
@@ -393,7 +393,7 @@ export default function LoginPage() {
               </div>
 
               {/* Toggle switch */}
-              <div className="mb-8 grid grid-cols-2 rounded-full border border-white/10 bg-white/5 p-1 shadow-inner backdrop-blur-md">
+              <div className="mb-5 grid grid-cols-2 rounded-full border border-white/10 bg-white/5 p-1 shadow-inner backdrop-blur-md">
                 <button
                   type="button"
                   onClick={() => {
@@ -401,7 +401,7 @@ export default function LoginPage() {
                     setMessage(null);
                     setErrorMessage(null);
                   }}
-                  className={`rounded-full py-2.5 text-sm font-semibold transition-all duration-300 ${
+                  className={`cursor-pointer rounded-full py-2 text-sm font-semibold transition-all duration-300 ${
                     authMode === "signin"
                       ? "bg-gradient-to-r from-accent to-emerald-400 text-[#0f172a] shadow-md"
                       : "text-muted hover:text-white hover:bg-white/5"
@@ -416,7 +416,7 @@ export default function LoginPage() {
                     setMessage(null);
                     setErrorMessage(null);
                   }}
-                  className={`rounded-full py-2.5 text-sm font-semibold transition-all duration-300 ${
+                  className={`cursor-pointer rounded-full py-2 text-sm font-semibold transition-all duration-300 ${
                     authMode === "signup"
                       ? "bg-gradient-to-r from-accent to-emerald-400 text-[#0f172a] shadow-md"
                       : "text-muted hover:text-white hover:bg-white/5"
@@ -427,7 +427,7 @@ export default function LoginPage() {
               </div>
 
               {/* Form Container */}
-              <div className="space-y-4">
+              <div className="space-y-3">
                 <AnimatePresence mode="wait">
                   {authMode === "signup" && (
                     <motion.div
@@ -447,7 +447,7 @@ export default function LoginPage() {
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         placeholder="Full name"
-                        className="w-full rounded-2xl border border-white/10 bg-white/5 py-3.5 pl-11 pr-4 text-sm text-white placeholder-muted-foreground outline-none transition-all focus:border-accent focus:bg-white/10 focus:ring-1 focus:ring-accent"
+                        className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-11 pr-4 text-sm text-white placeholder-muted-foreground outline-none transition-all focus:border-accent focus:bg-white/10 focus:ring-1 focus:ring-accent"
                       />
                     </motion.div>
                   )}
@@ -463,7 +463,7 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Email address"
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 py-3.5 pl-11 pr-4 text-sm text-white placeholder-muted-foreground outline-none transition-all focus:border-accent focus:bg-white/10 focus:ring-1 focus:ring-accent"
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-11 pr-4 text-sm text-white placeholder-muted-foreground outline-none transition-all focus:border-accent focus:bg-white/10 focus:ring-1 focus:ring-accent"
                   />
                 </div>
 
@@ -477,14 +477,14 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder={authMode === "signup" ? "Create a password" : "Enter password"}
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 py-3.5 pl-11 pr-12 text-sm text-white placeholder-muted-foreground outline-none transition-all focus:border-accent focus:bg-white/10 focus:ring-1 focus:ring-accent"
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-11 pr-12 text-sm text-white placeholder-muted-foreground outline-none transition-all focus:border-accent focus:bg-white/10 focus:ring-1 focus:ring-accent"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-4 flex items-center text-muted-foreground hover:text-white transition-colors"
+                    className="absolute inset-y-0 right-2 flex cursor-pointer items-center rounded-lg px-2 text-gray-400 transition-all hover:bg-white/8 hover:text-black focus-visible:bg-white/8 focus-visible:text-black"
                   >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showPassword ? <EyeOff className="h-5 w-5 stroke-[2.35]" /> : <Eye className="h-5 w-5 stroke-[2.35]" />}
                   </button>
                 </div>
 
@@ -507,14 +507,14 @@ export default function LoginPage() {
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="Confirm password"
-                        className="w-full rounded-2xl border border-white/10 bg-white/5 py-3.5 pl-11 pr-12 text-sm text-white placeholder-muted-foreground outline-none transition-all focus:border-accent focus:bg-white/10 focus:ring-1 focus:ring-accent"
+                        className="w-full rounded-2xl border border-white/10 bg-white/5 py-3 pl-11 pr-12 text-sm text-white placeholder-muted-foreground outline-none transition-all focus:border-accent focus:bg-white/10 focus:ring-1 focus:ring-accent"
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute inset-y-0 right-0 pr-4 flex items-center text-muted-foreground hover:text-white transition-colors"
+                        className="absolute inset-y-0 right-2 flex cursor-pointer items-center rounded-lg px-2 text-gray-400 transition-all hover:bg-white/8 hover:text-black focus-visible:bg-white/8 focus-visible:text-black"
                       >
-                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        {showConfirmPassword ? <EyeOff className="h-5 w-5 stroke-[2.35]" /> : <Eye className="h-5 w-5 stroke-[2.35]" />}
                       </button>
                     </motion.div>
                   )}
@@ -524,7 +524,7 @@ export default function LoginPage() {
                   <motion.p
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400"
+                    className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2.5 text-sm text-red-400"
                   >
                     {errorMessage}
                   </motion.p>
@@ -534,7 +534,7 @@ export default function LoginPage() {
                   <motion.p
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl border border-accent/20 bg-accent/10 px-4 py-3 text-sm text-accent"
+                    className="rounded-xl border border-accent/20 bg-accent/10 px-4 py-2.5 text-sm text-accent"
                   >
                     {message}
                   </motion.p>
@@ -544,7 +544,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={handleEmailAuth}
                   disabled={formLoading || !!loading}
-                  className="group relative mt-2 flex w-full items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-r from-accent to-emerald-400 px-4 py-4 text-sm font-bold text-[#0f172a] shadow-[0_0_20px_rgba(52,211,153,0.2)] transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(52,211,153,0.4)] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
+                  className="group relative mt-1 flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-r from-accent to-emerald-400 px-4 py-3 text-sm font-bold text-[#0f172a] shadow-[0_0_20px_rgba(52,211,153,0.2)] transition-all hover:scale-[1.02] hover:shadow-[0_0_30px_rgba(52,211,153,0.4)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:scale-100"
                 >
                   <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
                   <span className="relative z-10 flex items-center gap-2">
@@ -560,7 +560,7 @@ export default function LoginPage() {
                 </button>
               </div>
 
-              <div className="relative my-8 flex items-center">
+              <div className="relative my-5 flex items-center">
                 <div className="flex-grow border-t border-white/10" />
                 <span className="mx-4 text-xs font-medium uppercase tracking-widest text-muted">
                   Or continue with
@@ -572,7 +572,7 @@ export default function LoginPage() {
                 <button
                   onClick={() => handleOAuthLogin("github")}
                   disabled={!!loading || formLoading}
-                  className="group flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/10 hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] disabled:opacity-50"
+                  className="group flex w-full cursor-pointer items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-white/10 hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading === 'github' ? (
                     <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -585,7 +585,7 @@ export default function LoginPage() {
                 <button
                   onClick={() => handleOAuthLogin("google")}
                   disabled={!!loading || formLoading}
-                  className="group flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5 text-sm font-semibold text-white transition-all hover:bg-white/10 hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] disabled:opacity-50"
+                  className="group flex w-full cursor-pointer items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-white/10 hover:border-white/20 hover:shadow-[0_0_15px_rgba(255,255,255,0.05)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {loading === 'google' ? (
                     <span className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -596,7 +596,7 @@ export default function LoginPage() {
                 </button>
               </div>
 
-              <div className="mt-8 flex justify-center">
+              <div className="mt-5 flex justify-center">
                 <Link
                   href="/dashboard"
                   className="group inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-white"

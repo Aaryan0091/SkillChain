@@ -29,12 +29,12 @@ const demoCertificates = [
 
 export default function CertificatesPage() {
   return (
-    <main className="w-full p-6 pt-4 sm:p-8 sm:pt-4 lg:p-10 lg:pt-4 mb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <main className="mb-16 w-full animate-in fade-in slide-in-from-bottom-4 px-4 pt-4 pb-10 duration-500 sm:px-6 sm:pb-14 lg:px-8 lg:pb-16">
       <section className="mb-10 space-y-3">
         <p className="inline-flex items-center rounded-full border border-accent/20 bg-accent/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-accent">
           Demo Certificates
         </p>
-        <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">
+        <h1 className="text-3xl font-semibold tracking-tight md:text-4xl">
           Certificate Showcase
         </h1>
         <p className="max-w-2xl text-base leading-relaxed text-muted">
@@ -43,9 +43,9 @@ export default function CertificatesPage() {
         </p>
       </section>
 
-      <section className="grid gap-6 lg:grid-cols-[1.25fr_0.75fr]">
+      <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr] lg:gap-6">
         <div className="rounded-[2rem] border border-border/70 bg-surface/50 p-6 shadow-sm backdrop-blur-xl">
-          <div className="mb-6 flex items-center justify-between gap-4">
+          <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
             <div>
               <h2 className="text-xl font-semibold tracking-tight">Issued Certificates</h2>
               <p className="mt-1 text-sm text-muted">
@@ -90,7 +90,7 @@ export default function CertificatesPage() {
                     </p>
                   </div>
 
-                  <div className="flex gap-3">
+                  <div className="flex flex-wrap gap-3">
                     <Link
                       href={`/verify/${certificate.id}`}
                       className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90"

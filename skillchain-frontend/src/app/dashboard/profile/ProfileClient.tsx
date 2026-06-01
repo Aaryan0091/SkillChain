@@ -1,12 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useEffect, useState } from "react";
 import { 
   ShieldCheck, GitCommit, Award, Terminal, 
-  Activity, Code, Zap, Calendar, Clock, 
+  Activity, Code, Calendar, Clock, 
   Mail, Fingerprint, LogOut, CheckCircle2,
-  Cpu, Globe, Star, Hexagon, Layers,
+  Star, Layers,
   ChevronRight
 } from "lucide-react";
 
@@ -24,12 +23,6 @@ interface ProfileClientProps {
 }
 
 export default function ProfileClient({ user, signOutAction }: ProfileClientProps) {
-  const [techStackAnimated, setTechStackAnimated] = useState(false);
-
-  useEffect(() => {
-    setTechStackAnimated(true);
-  }, []);
-
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -44,17 +37,17 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
   };
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-8 pb-10">
+    <div className="mx-auto w-full max-w-6xl space-y-6 pb-8 sm:space-y-8 sm:pb-10">
       {/* Header */}
       <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
         <div className="flex items-center gap-2 text-emerald-400 mb-2">
           <ShieldCheck className="h-5 w-5" />
           <span className="text-sm font-semibold tracking-wider uppercase">Enterprise Profile</span>
         </div>
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-white">
+        <h1 className="text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
           Verified <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-emerald-400">Credentials</span>
         </h1>
-        <p className="text-muted-foreground max-w-2xl text-lg mt-2">
+        <p className="mt-2 max-w-2xl text-base text-muted-foreground sm:text-lg">
           Comprehensive analysis of your developer identity, backed by AI assessment and secure verification.
         </p>
       </motion.div>
@@ -63,7 +56,7 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
         variants={container}
         initial="hidden"
         animate="show"
-        className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-8"
+        className="mt-6 grid grid-cols-1 gap-6 lg:mt-8 lg:grid-cols-12 lg:gap-8"
       >
         {/* Left Column - Identity */}
         <div className="lg:col-span-4 space-y-8">
@@ -250,13 +243,13 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
                   </div>
                   <div className="h-3 w-full bg-[#0f172a]/80 rounded-full overflow-hidden border border-white/5 shadow-inner">
                     <motion.div 
-                      initial={techStackAnimated ? false : { width: 0 }}
+                      initial={{ width: 0 }}
                       animate={{ width: `${skill.score}%` }}
                       transition={{ duration: 1.5, delay: 0.5 + (index * 0.1), ease: "easeOut" }}
                       className={`h-full rounded-full ${skill.color} relative overflow-hidden`}
                     >
                       <div
-                        className={`absolute inset-0 bg-white/25 w-full ${techStackAnimated ? "animate-[shimmer_2.4s_linear_1]" : ""}`}
+                        className="absolute inset-0 w-full bg-white/25 animate-[shimmer_2.4s_linear_1]"
                         style={{ transform: "translateX(-100%)" }}
                       />
                     </motion.div>

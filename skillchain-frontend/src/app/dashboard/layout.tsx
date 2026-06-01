@@ -1,30 +1,32 @@
 import Link from "next/link";
 import React from "react";
+import { redirect } from "next/navigation";
 import BackButton from "@/components/BackButton";
-import { createClient } from "@/utils/supabase/server";
+import { getSessionUser } from "@/utils/supabase/server";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getSessionUser();
+
+  if (!user) {
+    redirect("/login");
+  }
 
   const displayName =
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.name ||
-    user?.email?.split("@")[0] ||
+    user.user_metadata?.full_name ||
+    user.user_metadata?.name ||
+    user.email?.split("@")[0] ||
     "Developer";
-  const displayEmail = user?.email || "dev@skillchain.ai";
+  const displayEmail = user.email || "dev@skillchain.ai";
   const avatarLetter = displayName.charAt(0).toUpperCase() || "D";
 
   return (
-    <div className="flex min-h-screen w-full relative">
+    <div className="relative flex min-h-screen w-full">
       {/* Sidebar */}
-      <aside className="sticky top-0 h-screen w-64 flex-col border-r border-border bg-surface/50 backdrop-blur-xl hidden md:flex">
+      <aside className="sticky top-0 hidden h-screen w-64 flex-col border-r border-border bg-surface/50 backdrop-blur-xl lg:flex">
         <div className="flex h-16 items-center px-6 border-b border-border/50">
           <Link href="/" className="text-lg font-bold tracking-[0.2em] uppercase text-accent">
             SkillChain
@@ -67,9 +69,9 @@ export default async function DashboardLayout({
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
+      <div className="flex min-h-screen flex-1 flex-col overflow-x-hidden">
         {/* Mobile Header */}
-        <header className="md:hidden flex items-center justify-between h-16 px-6 border-b border-border bg-surface/80 backdrop-blur-md sticky top-0 z-20">
+        <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-surface/80 px-4 backdrop-blur-md sm:px-6 lg:hidden">
           <Link href="/" className="text-sm font-bold tracking-widest uppercase text-accent">
             SkillChain
           </Link>
@@ -78,8 +80,8 @@ export default async function DashboardLayout({
           </button>
         </header>
         
-        <div className="flex-1 relative z-10">
-          <div className="hidden px-6 pt-6 md:block lg:px-8">
+        <div className="relative z-10 flex-1">
+          <div className="hidden px-4 pt-4 sm:px-6 md:block lg:px-8 lg:pt-6">
             <BackButton href="/" text="Back to Home" />
           </div>
           {children}

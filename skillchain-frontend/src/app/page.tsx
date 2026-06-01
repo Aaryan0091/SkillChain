@@ -7,7 +7,6 @@ import LiquidEther from "../components/LiquidEther";
 import { 
   Code2, 
   ShieldCheck, 
-  TrendingUp, 
   Sparkles, 
   Terminal, 
   GitBranch, 
@@ -29,24 +28,6 @@ const staggerContainer: Variants = {
   }
 };
 
-const pillars = [
-  {
-    title: "Deep Code Analysis",
-    description: "We look beyond lines of code. Our AI understands your system architecture, clean code practices, and complex logic.",
-    icon: <Terminal className="h-6 w-6 text-accent" />,
-  },
-  {
-    title: "Verifiable Proof",
-    description: "Every skill score is backed by an immutable blockchain certificate. No more fake resume claims.",
-    icon: <ShieldCheck className="h-6 w-6 text-accent" />,
-  },
-  {
-    title: "Explainable Metrics",
-    description: "Don't just get a score. See exactly how your commits, pull requests, and code quality contributed to your rank.",
-    icon: <TrendingUp className="h-6 w-6 text-accent" />,
-  },
-];
-
 const steps = [
   {
     step: "01",
@@ -67,7 +48,7 @@ const steps = [
 
 export default function Home() {
   return (
-    <div className="relative min-h-screen text-foreground overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden text-foreground">
       <div className="fixed inset-0 z-[0] pointer-events-none">
         <LiquidEther
           mouseForce={20}
@@ -101,9 +82,9 @@ export default function Home() {
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="fixed top-6 left-0 right-0 z-50 flex justify-center px-4 w-full pointer-events-none"
+        className="fixed left-0 right-0 top-3 z-50 flex w-full justify-center px-3 pointer-events-none sm:top-4 sm:px-4"
       >
-        <header className="pointer-events-auto flex w-full max-w-4xl items-center justify-between rounded-full border border-white/10 bg-background/40 px-4 py-2.5 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-2xl transition-all sm:px-6">
+        <header className="pointer-events-auto flex w-full max-w-5xl items-center justify-between rounded-full border border-white/10 bg-background/40 px-3 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.4)] backdrop-blur-2xl transition-all sm:px-5">
           <div className="flex items-center gap-2">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-accent/20 border border-accent/20">
               <Cpu className="h-4 w-4 text-accent" />
@@ -113,12 +94,12 @@ export default function Home() {
             </p>
           </div>
           <div className="hidden items-center gap-1 md:flex rounded-full bg-white/5 border border-white/5 shadow-inner p-1">
-            <Link href="#features" className="px-4 py-1.5 rounded-full text-sm font-medium text-muted hover:text-white hover:bg-white/10 transition-all">
+            <a href="#features" className="px-4 py-1.5 rounded-full text-sm font-medium text-muted hover:text-white hover:bg-white/10 transition-all">
               Features
-            </Link>
-            <Link href="#how-it-works" className="px-4 py-1.5 rounded-full text-sm font-medium text-muted hover:text-white hover:bg-white/10 transition-all">
+            </a>
+            <a href="#how-it-works" className="px-4 py-1.5 rounded-full text-sm font-medium text-muted hover:text-white hover:bg-white/10 transition-all">
               How it Works
-            </Link>
+            </a>
             <Link href="/verify" className="px-4 py-1.5 rounded-full text-sm font-medium text-muted hover:text-white hover:bg-white/10 transition-all">
               Verify ID
             </Link>
@@ -126,13 +107,13 @@ export default function Home() {
               Dashboard
             </Link>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link href="/login" className="hidden text-sm font-medium text-muted hover:text-white transition-colors sm:block">
               Log In
             </Link>
             <Link
               href="/login"
-              className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-gradient-to-r from-accent to-emerald-400 px-5 py-2 font-medium text-background shadow-[0_0_20px_rgba(52,211,153,0.3)] transition-all hover:scale-105 hover:shadow-[0_0_25px_rgba(52,211,153,0.5)] active:scale-95 border border-white/20"
+              className="group relative inline-flex items-center justify-center overflow-hidden rounded-full border border-white/20 bg-gradient-to-r from-accent to-emerald-400 px-4 py-2 text-sm font-medium text-background shadow-[0_0_20px_rgba(52,211,153,0.3)] transition-all hover:scale-105 hover:shadow-[0_0_25px_rgba(52,211,153,0.5)] active:scale-95 sm:px-5 sm:text-base"
             >
               <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
               <span className="relative z-10 flex items-center gap-2 font-bold">
@@ -143,71 +124,71 @@ export default function Home() {
         </header>
       </motion.div>
 
-      <main className="relative z-10 mx-auto w-full max-w-7xl px-6 sm:px-10 lg:px-12">
+      <main className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-10">
         {/* HERO SECTION */}
-        <section className="relative pt-24 pb-32 lg:pt-36 lg:pb-40 flex flex-col items-center text-center">
+        <section className="relative flex min-h-[100svh] flex-col items-center justify-center pt-24 pb-20 text-center sm:min-h-[100svh] sm:pt-28 sm:pb-24 lg:min-h-[100svh] lg:pt-32 lg:pb-28">
           <motion.div
             initial="hidden"
             animate="visible"
             variants={staggerContainer}
-            className="flex flex-col items-center max-w-4xl"
+            className="flex max-w-4xl flex-col items-center"
           >
             <motion.div variants={fadeUp} className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-accent/10 px-4 py-2 text-sm font-medium text-accent backdrop-blur-md">
               <Sparkles className="h-4 w-4" />
               <span>Stand out for SWE Internships & New Grad roles</span>
             </motion.div>
             
-            <motion.h1 variants={fadeUp} className="text-5xl font-extrabold tracking-tight sm:text-7xl lg:text-8xl">
+            <motion.h1 variants={fadeUp} className="text-4xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl xl:text-8xl">
               Turn your <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-accent-strong">code</span> into<br className="hidden sm:block"/> undeniable proof.
             </motion.h1>
             
-            <motion.p variants={fadeUp} className="mt-8 max-w-2xl text-lg leading-relaxed text-muted sm:text-xl">
+            <motion.p variants={fadeUp} className="mt-6 max-w-2xl text-base leading-relaxed text-muted sm:text-lg lg:text-xl">
               Stop relying on a messy GitHub profile. SkillChain AI analyzes your hackathon and course projects to generate cryptographically verified, recruiter-ready certificates.
             </motion.p>
             
-            <motion.div variants={fadeUp} className="mt-10 flex flex-col items-center gap-4 sm:flex-row">
+            <motion.div variants={fadeUp} className="mt-8 flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-center sm:gap-4">
               <Link
                 href="/submit"
-                className="group flex h-14 items-center gap-2 rounded-full bg-accent px-8 text-base font-semibold text-white shadow-[0_0_40px_-10px_var(--color-accent)] transition-all hover:bg-accent/90 hover:shadow-[0_0_60px_-15px_var(--color-accent)]"
+                className="group flex h-12 items-center justify-center gap-2 rounded-full bg-accent px-6 text-sm font-semibold text-white shadow-[0_0_40px_-10px_var(--color-accent)] transition-all hover:bg-accent/90 hover:shadow-[0_0_60px_-15px_var(--color-accent)] sm:h-14 sm:px-8 sm:text-base"
               >
                 <GitBranch className="h-5 w-5" />
                 Connect GitHub
               </Link>
-              <Link
+              <a
                 href="#features"
-                className="flex h-14 items-center justify-center rounded-full border-2 border-border bg-surface px-8 text-base font-semibold text-foreground backdrop-blur-sm transition-colors hover:bg-border/50"
+                className="flex h-12 items-center justify-center rounded-full border-2 border-border bg-surface px-6 text-sm font-semibold text-foreground backdrop-blur-sm transition-colors hover:bg-border/50 sm:h-14 sm:px-8 sm:text-base"
               >
                 See how it works
-              </Link>
+              </a>
               <Link
                 href="/verify"
-                className="flex h-14 items-center justify-center rounded-full border-2 border-accent/30 bg-accent/10 px-8 text-base font-semibold text-accent backdrop-blur-sm transition-colors hover:bg-accent/15"
+                className="flex h-12 items-center justify-center rounded-full border-2 border-accent/30 bg-accent/10 px-6 text-sm font-semibold text-accent backdrop-blur-sm transition-colors hover:bg-accent/15 sm:h-14 sm:px-8 sm:text-base"
               >
                 Verify Certificate ID
               </Link>
             </motion.div>
 
-            <motion.div variants={fadeUp} className="mt-12 flex items-center gap-8 text-sm font-medium text-muted">
-              <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> 100% Free for Students</div>
+            <motion.div variants={fadeUp} className="mt-8 flex flex-wrap items-center justify-center gap-4 text-sm font-medium text-muted sm:mt-10 sm:gap-8">
+              <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> Explainable Skill Reports</div>
               <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-accent" /> Blockchain Verified</div>
             </motion.div>
           </motion.div>
         </section>
 
         {/* BENTO GRID FEATURES SECTION */}
-        <section id="features" className="py-24">
+        <section id="features" className="scroll-mt-24 py-16 sm:scroll-mt-28 sm:py-20 lg:py-24">
           <motion.div 
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: false, margin: "-100px" }}
             transition={{ duration: 0.7 }}
-            className="mb-16 text-center"
+            className="mb-12 text-center sm:mb-16"
           >
             <h2 className="text-3xl font-bold tracking-tight sm:text-5xl">Engineered for Builders</h2>
-            <p className="mt-4 text-lg text-muted max-w-2xl mx-auto">We don't count lines of code. We analyze architecture, security, and complexity to prove you're ready for production.</p>
+            <p className="mt-4 max-w-2xl mx-auto text-lg text-muted">We don&apos;t count lines of code. We analyze architecture, security, and complexity to prove you&apos;re ready for production.</p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[300px]">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-3 md:auto-rows-[280px] lg:auto-rows-[300px]">
             {/* Large Card 1 */}
             <motion.div 
               initial={{ opacity: 0, y: 40 }}
@@ -215,7 +196,7 @@ export default function Home() {
               viewport={{ once: false, margin: "-50px" }}
               transition={{ duration: 0.5 }}
               whileHover={{ y: -5 }}
-              className="md:col-span-2 group relative overflow-hidden rounded-[2.5rem] border border-border bg-surface p-8 backdrop-blur-md transition-all hover:border-accent/40"
+              className="group relative overflow-hidden rounded-[2rem] border border-border bg-surface p-6 backdrop-blur-md transition-all hover:border-accent/40 sm:rounded-[2.5rem] sm:p-8 md:col-span-2"
             >
               <div className="absolute top-0 right-0 p-8 opacity-20 transition-opacity group-hover:opacity-40">
                 <Code2 className="h-32 w-32 text-accent" />
@@ -238,7 +219,7 @@ export default function Home() {
               viewport={{ once: false, margin: "-50px" }}
               transition={{ duration: 0.5, delay: 0.1 }}
               whileHover={{ y: -5 }}
-              className="group relative overflow-hidden rounded-[2.5rem] border border-border bg-surface p-8 backdrop-blur-md transition-all hover:border-accent-strong/40"
+              className="group relative overflow-hidden rounded-[2rem] border border-border bg-surface p-6 backdrop-blur-md transition-all hover:border-accent-strong/40 sm:rounded-[2.5rem] sm:p-8"
             >
               <div className="absolute bottom-0 right-0 p-4 opacity-10">
                 <ShieldCheck className="h-24 w-24 text-accent-strong" />
@@ -261,7 +242,7 @@ export default function Home() {
               viewport={{ once: false, margin: "-50px" }}
               transition={{ duration: 0.5, delay: 0.2 }}
               whileHover={{ y: -5 }}
-              className="group relative overflow-hidden rounded-[2.5rem] border border-border bg-surface p-8 backdrop-blur-md transition-all hover:border-accent/40"
+              className="group relative overflow-hidden rounded-[2rem] border border-border bg-surface p-6 backdrop-blur-md transition-all hover:border-accent/40 sm:rounded-[2.5rem] sm:p-8"
             >
               <div className="relative z-10 flex h-full flex-col justify-between">
                 <div className="w-12 h-12 rounded-2xl bg-accent/20 flex items-center justify-center mb-6">
@@ -281,7 +262,7 @@ export default function Home() {
               viewport={{ once: false, margin: "-50px" }}
               transition={{ duration: 0.5, delay: 0.3 }}
               whileHover={{ y: -5 }}
-              className="md:col-span-2 group relative overflow-hidden rounded-[2.5rem] border border-border bg-gradient-to-br from-surface to-surface-strong p-8 backdrop-blur-md transition-all hover:border-accent/40"
+              className="group relative overflow-hidden rounded-[2rem] border border-border bg-gradient-to-br from-surface to-surface-strong p-6 backdrop-blur-md transition-all hover:border-accent/40 sm:rounded-[2.5rem] sm:p-8 md:col-span-2"
             >
               <div className="absolute inset-0 bg-accent/5 opacity-0 transition-opacity group-hover:opacity-100" />
               <div className="relative z-10 flex h-full flex-col justify-between md:flex-row md:items-center">
@@ -302,7 +283,7 @@ export default function Home() {
         </section>
 
         {/* HOW IT WORKS SECTION */}
-        <section id="how-it-works" className="py-32 relative">
+        <section id="how-it-works" className="relative scroll-mt-24 py-20 sm:scroll-mt-28 sm:py-24 lg:py-28">
           <div className="absolute inset-0 bg-surface-strong/30 rounded-[3rem] -z-10" />
           <motion.div 
             initial={{ opacity: 0, y: 40 }}
@@ -314,7 +295,7 @@ export default function Home() {
             <h2 className="text-3xl font-bold sm:text-5xl">From Repo to Resume in Minutes</h2>
           </motion.div>
           
-          <div className="grid md:grid-cols-3 gap-8 px-4 sm:px-8">
+          <div className="grid gap-6 px-2 sm:px-4 md:grid-cols-3 lg:gap-8 lg:px-8">
             {steps.map((step, idx) => (
               <motion.div 
                 key={step.step}
@@ -322,9 +303,9 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: false, margin: "-50px" }}
                 transition={{ duration: 0.5, delay: idx * 0.2 }}
-                className="relative flex flex-col items-center text-center p-6"
+                className="relative flex flex-col items-center p-4 text-center sm:p-6"
               >
-                <div className="text-6xl font-black text-accent/10 mb-6">{step.step}</div>
+                <div className="mb-4 text-5xl font-black text-accent/10 sm:mb-6 sm:text-6xl">{step.step}</div>
                 <h3 className="text-xl font-bold mb-3">{step.title}</h3>
                 <p className="text-muted">{step.description}</p>
                 
@@ -337,8 +318,8 @@ export default function Home() {
         </section>
 
         {/* BOTTOM CTA */}
-        <section className="py-32">
-          <div className="relative overflow-hidden rounded-[3rem] border border-border bg-surface-strong px-6 py-20 text-center sm:px-16 backdrop-blur-md">
+        <section className="py-20 sm:py-24 lg:py-28">
+          <div className="relative overflow-hidden rounded-[2rem] border border-border bg-surface-strong px-5 py-14 text-center backdrop-blur-md sm:rounded-[2.5rem] sm:px-10 sm:py-16 lg:rounded-[3rem] lg:px-16 lg:py-20">
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg h-full bg-accent/20 blur-[100px] pointer-events-none" />
             
             <motion.div 
@@ -348,14 +329,14 @@ export default function Home() {
               transition={{ duration: 0.7 }}
               className="relative z-10 mx-auto max-w-2xl space-y-8"
             >
-              <h2 className="text-4xl font-bold tracking-tight sm:text-5xl">Ready to prove your skills?</h2>
-              <p className="text-lg text-muted">
-                Don't let your hard work get lost in the noise. Generate your verifiable skill certificate today and land your dream role.
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">Ready to prove your skills?</h2>
+              <p className="text-base text-muted sm:text-lg">
+                Don&apos;t let your hard work get lost in the noise. Generate your verifiable skill certificate today and land your dream role.
               </p>
               <div className="flex justify-center">
                 <Link
                   href="/submit"
-                  className="group relative inline-flex gap-3 h-14 items-center justify-center overflow-hidden rounded-full bg-accent px-8 text-base font-medium text-white shadow-lg shadow-accent/40 transition-all hover:scale-105 hover:bg-accent/90 hover:shadow-accent/60 active:scale-95"
+                  className="group relative inline-flex h-12 items-center justify-center gap-3 overflow-hidden rounded-full bg-accent px-6 text-sm font-medium text-white shadow-lg shadow-accent/40 transition-all hover:scale-105 hover:bg-accent/90 hover:shadow-accent/60 active:scale-95 sm:h-14 sm:px-8 sm:text-base"
                 >
                   Start Free Analysis
                   <ArrowRight className="h-5 w-5 transition-transform group-hover:translate-x-1" />
@@ -372,9 +353,9 @@ export default function Home() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: false }}
         transition={{ duration: 0.6 }}
-        className="border-t border-border bg-surface/50 py-10 backdrop-blur"
+        className="border-t border-border bg-surface/50 py-8 backdrop-blur sm:py-10"
       >
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-6 px-6 sm:flex-row lg:px-12">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-4 px-4 text-center sm:flex-row sm:gap-6 sm:px-6 sm:text-left lg:px-12">
           <div className="flex items-center gap-2">
             <Cpu className="h-5 w-5 text-accent" />
             <span className="text-sm font-bold uppercase tracking-widest text-foreground">

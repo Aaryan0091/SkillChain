@@ -159,7 +159,7 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
 
   if (!certificate) {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center px-6 py-20 text-center">
+      <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6 sm:py-20">
         <div className="absolute top-10 left-10">
           <BackButton href="/verify" text="Back to Verify" />
         </div>
@@ -187,7 +187,7 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
   const StatIcons = [Code2, Award, GitCommit, Activity];
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-12 sm:px-8 lg:px-12">
+    <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-10 lg:py-12">
       <div className="mb-6">
          <BackButton href="/verify" text="Back to Search" />
       </div>
@@ -195,11 +195,11 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
       <div className="flex flex-col gap-6 lg:gap-8">
         
         {/* Top Header Section */}
-        <header className="flex flex-col gap-8 sm:flex-row sm:items-center sm:justify-between rounded-[2.5rem] border border-border/70 bg-surface/50 p-8 sm:p-10 shadow-2xl backdrop-blur-2xl relative overflow-hidden">
+        <header className="relative flex flex-col gap-6 overflow-hidden rounded-[2rem] border border-border/70 bg-surface/50 p-5 shadow-2xl backdrop-blur-2xl sm:gap-8 sm:rounded-[2.5rem] sm:p-8 lg:flex-row lg:items-center lg:justify-between lg:p-10">
           <div className="absolute right-0 top-0 -z-10 h-full w-2/3 bg-gradient-to-l from-accent/5 to-transparent blur-3xl rounded-r-[2.5rem]" />
           <div className="absolute -left-20 -top-20 -z-10 h-60 w-60 rounded-full bg-surface-strong/50 blur-3xl" />
           
-          <div className="flex items-center gap-6 z-10">
+          <div className="z-10 flex items-center gap-4 sm:gap-6">
             <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.75rem] bg-gradient-to-br from-accent/30 to-accent/5 border border-accent/30 text-accent shadow-inner">
                <User className="h-10 w-10" strokeWidth={1.5} />
             </div>
@@ -216,7 +216,7 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
                   </span>
                 )}
               </div>
-              <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl text-foreground drop-shadow-md">
+              <h1 className="text-3xl font-extrabold tracking-tight text-foreground drop-shadow-md sm:text-4xl lg:text-5xl">
                 {certificate.owner}
               </h1>
               <p className="mt-3 text-sm font-medium text-muted flex items-center gap-2">
@@ -225,7 +225,7 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
             </div>
           </div>
 
-          <div className="z-10 flex shrink-0 items-center justify-center gap-6 rounded-[2rem] bg-background/80 border border-border/80 p-6 shadow-xl backdrop-blur-xl transition-transform hover:scale-[1.02] duration-300">
+          <div className="z-10 flex shrink-0 items-center justify-center gap-4 rounded-[1.5rem] border border-border/80 bg-background/80 p-4 shadow-xl backdrop-blur-xl transition-transform duration-300 hover:scale-[1.02] sm:gap-6 sm:rounded-[2rem] sm:p-6">
             <div className="relative flex h-28 w-28 items-center justify-center">
               <svg className="h-full w-full -rotate-90 transform drop-shadow-lg" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="42" fill="none" className="stroke-border/40" strokeWidth="8"/>
@@ -403,4 +403,3 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
     </main>
   );
 }
-

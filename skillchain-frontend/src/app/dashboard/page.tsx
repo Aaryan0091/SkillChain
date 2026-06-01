@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   ArrowUpRight,
   Award,
@@ -13,100 +14,350 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
+import { createClient } from "@/utils/supabase/server";
 
-const overviewStats = [
-  {
-    label: "Repositories analyzed",
-    value: "12",
-    detail: "+2 this week",
-    accent: "from-emerald-400/35 to-transparent",
-  },
-  {
-    label: "Certificates minted",
-    value: "8",
-    detail: "7 verified on Polygon",
-    accent: "from-amber-400/35 to-transparent",
-  },
-  {
-    label: "Active queue",
-    value: "1",
-    detail: "1 scan in progress",
-    accent: "from-sky-400/35 to-transparent",
-  },
-];
+type MetricRecord = {
+  files: number | null;
+  test_ratio: number | null;
+  raw_metrics_json?: {
+    fileStats?: {
+      totalFiles?: number;
+      sourceFiles?: number;
+      testFiles?: number;
+      docsFiles?: number;
+      backendFiles?: number;
+      frontendFiles?: number;
+    };
+    summary?: string;
+  } | null;
+};
 
-const capabilityBands = [
-  { name: "Architecture", score: 91 },
-  { name: "Backend", score: 84 },
-  { name: "Documentation", score: 72 },
-  { name: "Security", score: 78 },
-];
+type ScoreRecord = {
+  backend_score: number | null;
+  architecture_score: number | null;
+  documentation_score: number | null;
+  confidence_score: number | null;
+  explanation: string | null;
+};
 
-const liveProjects = [
-  {
-    repo: "nextjs-saas-platform",
-    branch: "main",
-    status: "Stable",
-    score: 88,
-    summary: "Strong modular frontend shell with consistent route boundaries and clean deployment setup.",
-  },
-  {
-    repo: "python-api-service",
-    branch: "staging",
-    status: "Ready for cert",
-    score: 74,
-    summary: "Backend structure is solid, but tests and validation coverage still leave confidence on the table.",
-  },
-  {
-    repo: "defi-smart-contracts",
-    branch: "audit-pass-2",
-    status: "Analyzing",
-    score: null,
-    summary: "Current run is extracting contract structure, deployment traces, and documentation evidence.",
-  },
-];
+type CertificateRecord = {
+  id: string;
+  status: string | null;
+  verification_status: string | null;
+  created_at: string | null;
+};
 
-const queue = [
-  {
-    step: "Metadata sync",
-    state: "Complete",
-    note: "Repo tree, languages, and branch details were pulled successfully.",
-  },
-  {
-    step: "Signal extraction",
-    state: "Running",
-    note: "Selected files are being scored for architecture, docs, tests, and implementation strength.",
-  },
-  {
-    step: "Certificate prep",
-    state: "Waiting",
-    note: "Certificate payload generation will unlock when this run clears scoring.",
-  },
-];
+type AnalysisJobRecord = {
+  id: string;
+  job_type: string;
+  status: string;
+  started_at: string | null;
+  finished_at: string | null;
+  error_message: string | null;
+};
 
-const recentCertificates = [
-  {
-    id: "SC-2026-001",
-    repo: "nextjs-saas-platform",
-    status: "Verified",
-    issuedAt: "10 Apr 2026",
-  },
-  {
-    id: "SC-2026-002",
-    repo: "python-api-service",
-    status: "Pending",
-    issuedAt: "08 Apr 2026",
-  },
-];
+type ProjectRecord = {
+  id: string;
+  repo_name: string;
+  repo_url: string;
+  analysis_status: string;
+  default_branch: string | null;
+  created_at: string;
+  last_analyzed_at: string | null;
+  analysis_error: string | null;
+  metrics?: MetricRecord[];
+  scores?: ScoreRecord[];
+  certificates?: CertificateRecord[];
+  analysis_jobs?: AnalysisJobRecord[];
+};
 
-export default function DashboardPage() {
+function getApiProjectsUrl() {
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+  if (!baseUrl) {
+    throw new Error("Missing NEXT_PUBLIC_API_BASE_URL for dashboard data fetching.");
+  }
+
+  const normalized = baseUrl.replace(/\/$/, "");
+  return normalized.endsWith("/api/v1")
+    ? `${normalized}/projects`
+    : `${normalized}/api/v1/projects`;
+}
+
+function formatRelativeDate(value: string | null) {
+  if (!value) return "No activity yet";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown time";
+
+  const diffMs = Date.now() - date.getTime();
+  const diffHours = Math.max(0, Math.round(diffMs / (1000 * 60 * 60)));
+
+  if (diffHours < 1) return "Updated just now";
+  if (diffHours < 24) return `Updated ${diffHours}h ago`;
+
+  const diffDays = Math.round(diffHours / 24);
+  if (diffDays < 7) return `Updated ${diffDays}d ago`;
+
+  return `Updated ${date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  })}`;
+}
+
+function formatDate(value: string | null) {
+  if (!value) return "Unknown";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Unknown";
+
+  return date.toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function repoLabel(project: ProjectRecord) {
+  if (project.repo_name?.trim()) return project.repo_name;
+
+  try {
+    const url = new URL(project.repo_url);
+    return url.pathname.replace(/^\/+/, "") || project.repo_url;
+  } catch {
+    return project.repo_url;
+  }
+}
+
+function projectStatusLabel(project: ProjectRecord) {
+  switch (project.analysis_status) {
+    case "completed":
+      return project.certificates?.length ? "Ready for cert" : "Stable";
+    case "processing":
+      return "Analyzing";
+    case "failed":
+      return "Needs retry";
+    default:
+      return "Queued";
+  }
+}
+
+function statusTone(status: string) {
+  switch (status) {
+    case "Stable":
+      return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
+    case "Ready for cert":
+      return "border-amber-400/20 bg-amber-400/10 text-amber-300";
+    case "Analyzing":
+      return "border-sky-400/20 bg-sky-400/10 text-sky-300";
+    case "Needs retry":
+      return "border-red-400/20 bg-red-400/10 text-red-300";
+    default:
+      return "border-white/10 bg-white/5 text-muted";
+  }
+}
+
+function average(values: Array<number | null | undefined>) {
+  const valid = values.filter((value): value is number => typeof value === "number");
+  if (!valid.length) return null;
+  return Math.round(valid.reduce((sum, value) => sum + value, 0) / valid.length);
+}
+
+function gradeFromScore(score: number | null) {
+  if (score === null) return "Pending";
+  if (score >= 90) return "A";
+  if (score >= 80) return "A-";
+  if (score >= 70) return "B+";
+  if (score >= 60) return "B";
+  return "C";
+}
+
+function firstMetric(project: ProjectRecord) {
+  return project.metrics?.[0] ?? null;
+}
+
+function firstScore(project: ProjectRecord) {
+  return project.scores?.[0] ?? null;
+}
+
+function latestJob(project: ProjectRecord) {
+  return project.analysis_jobs?.[0] ?? null;
+}
+
+async function fetchProjects() {
+  const supabase = await createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    redirect("/login");
+  }
+
+  const response = await fetch(getApiProjectsUrl(), {
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    cache: "no-store",
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Could not load dashboard projects.");
+  }
+
+  return (result.data || []) as ProjectRecord[];
+}
+
+export default async function DashboardPage() {
+  let projects: ProjectRecord[] = [];
+  let loadError: string | null = null;
+
+  try {
+    projects = await fetchProjects();
+  } catch (error) {
+    loadError =
+      error instanceof Error
+        ? error.message
+        : "Could not load dashboard projects.";
+  }
+
+  const focusProject = projects[0] ?? null;
+  const focusScore = focusProject ? firstScore(focusProject) : null;
+  const focusMetric = focusProject ? firstMetric(focusProject) : null;
+  const focusJob = focusProject ? latestJob(focusProject) : null;
+
+  const completedProjects = projects.filter(
+    (project) => project.analysis_status === "completed"
+  ).length;
+  const activeQueue = projects.filter((project) =>
+    project.analysis_jobs?.some((job) => job.status === "running")
+  ).length;
+  const mintedCertificates = projects.reduce(
+    (count, project) => count + (project.certificates?.length || 0),
+    0
+  );
+  const verifiedCertificates = projects.reduce(
+    (count, project) =>
+      count +
+      (project.certificates?.filter(
+        (certificate) => certificate.verification_status === "verified"
+      ).length || 0),
+    0
+  );
+
+  const overviewStats = [
+    {
+      label: "Repositories analyzed",
+      value: String(projects.length),
+      detail:
+        projects.length > 0
+          ? `${completedProjects} completed`
+          : "No projects yet",
+      accent: "from-emerald-400/35 to-transparent",
+    },
+    {
+      label: "Certificates minted",
+      value: String(mintedCertificates),
+      detail:
+        mintedCertificates > 0
+          ? `${verifiedCertificates} verified on-chain`
+          : "0 ready yet",
+      accent: "from-amber-400/35 to-transparent",
+    },
+    {
+      label: "Active queue",
+      value: String(activeQueue),
+      detail:
+        activeQueue > 0
+          ? `${activeQueue} scan in progress`
+          : "No active scans",
+      accent: "from-sky-400/35 to-transparent",
+    },
+  ];
+
+  const capabilityBands = focusScore
+    ? [
+        { name: "Architecture", score: focusScore.architecture_score ?? 0 },
+        { name: "Backend", score: focusScore.backend_score ?? 0 },
+        { name: "Documentation", score: focusScore.documentation_score ?? 0 },
+        { name: "Confidence", score: focusScore.confidence_score ?? 0 },
+      ]
+    : [
+        { name: "Architecture", score: 0 },
+        { name: "Backend", score: 0 },
+        { name: "Documentation", score: 0 },
+        { name: "Confidence", score: 0 },
+      ];
+
+  const liveProjects = projects.slice(0, 3).map((project) => {
+    const score = firstScore(project);
+    return {
+      id: project.id,
+      repo: repoLabel(project),
+      branch: project.default_branch || "default",
+      status: projectStatusLabel(project),
+      score: score ? score.confidence_score : null,
+      summary:
+        score?.explanation ||
+        project.analysis_error ||
+        formatRelativeDate(project.last_analyzed_at || project.created_at),
+    };
+  });
+
+  const queue = focusProject?.analysis_jobs?.length
+    ? focusProject.analysis_jobs.map((job) => ({
+        step: job.job_type.replace(/_/g, " "),
+        state: job.status,
+        note:
+          job.error_message ||
+          (job.status === "completed"
+            ? "The saved project analysis finished successfully."
+            : job.status === "running"
+              ? "Analysis is still running for this repository."
+              : "This job is waiting for the next processing step."),
+      }))
+    : [
+        {
+          step: "repository analysis",
+          state: projects.length ? "Waiting" : "No jobs yet",
+          note: projects.length
+            ? "This project has no visible job history yet."
+            : "Analyze a repository to populate the queue state.",
+        },
+      ];
+
+  const recentCertificates = projects
+    .flatMap((project) =>
+      (project.certificates || []).map((certificate) => ({
+        id: certificate.id,
+        repo: repoLabel(project),
+        status:
+          certificate.verification_status === "verified"
+            ? "Verified"
+            : certificate.status === "pending"
+              ? "Pending"
+              : certificate.status || "Pending",
+        issuedAt: formatDate(certificate.created_at),
+      }))
+    )
+    .slice(0, 3);
+
+  const architectureAverage = average(
+    projects.map((project) => firstScore(project)?.architecture_score)
+  );
+  const confidenceAverage = average(
+    projects.map((project) => firstScore(project)?.confidence_score)
+  );
+
   return (
-    <main className="w-full px-6 pb-16 pt-4 sm:px-8 lg:px-10">
+    <main className="w-full px-4 pb-12 pt-4 sm:px-6 sm:pb-14 lg:px-8 lg:pb-16">
       <section className="relative overflow-hidden rounded-[2.5rem] border border-border/70 bg-surface/50 shadow-[0_24px_70px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,0.16),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(245,158,11,0.16),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.03),transparent_58%)]" />
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
 
-        <div className="relative grid gap-8 px-6 py-7 sm:px-8 xl:grid-cols-[1.45fr_0.9fr]">
+        <div className="relative grid gap-6 px-4 py-5 sm:px-6 sm:py-6 lg:gap-8 lg:px-8 xl:grid-cols-[1.45fr_0.9fr]">
           <div className="space-y-8">
             <div className="flex flex-wrap items-center gap-3 text-xs font-semibold uppercase tracking-[0.24em] text-accent">
               <span className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5">
@@ -115,17 +366,22 @@ export default function DashboardPage() {
               </span>
               <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-muted">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
-                Certificate system online
+                {loadError ? "Backend unavailable" : "Live project data"}
               </span>
             </div>
 
             <div className="max-w-3xl space-y-4">
-              <h1 className="text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+              <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
                 Your repo intelligence, arranged like a real control room.
               </h1>
               <p className="max-w-2xl text-base leading-relaxed text-muted">
                 Track what is cert-ready, what still needs stronger evidence, and where the current scan queue is spending its time.
               </p>
+              {loadError ? (
+                <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                  {loadError}
+                </p>
+              ) : null}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-3">
@@ -138,7 +394,7 @@ export default function DashboardPage() {
                   <div className="relative">
                     <p className="text-xs uppercase tracking-[0.2em] text-muted">{stat.label}</p>
                     <div className="mt-4 flex items-end justify-between gap-3">
-                      <span className="text-4xl font-semibold tracking-tight text-white">{stat.value}</span>
+                      <span className="text-3xl font-semibold tracking-tight text-white sm:text-4xl">{stat.value}</span>
                       <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-muted">
                         {stat.detail}
                       </span>
@@ -156,12 +412,12 @@ export default function DashboardPage() {
                   Focus repo
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
-                  defi-smart-contracts
+                  {focusProject ? repoLabel(focusProject) : "No project yet"}
                 </h2>
               </div>
-              <span className="inline-flex items-center gap-2 rounded-full border border-amber-400/20 bg-amber-400/10 px-3 py-1 text-xs font-semibold text-amber-300">
+              <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${statusTone(focusProject ? projectStatusLabel(focusProject) : "Queued")}`}>
                 <Clock3 className="h-3.5 w-3.5" />
-                Analyzing
+                {focusProject ? projectStatusLabel(focusProject) : "Waiting"}
               </span>
             </div>
 
@@ -195,7 +451,11 @@ export default function DashboardPage() {
                   Scan note
                 </div>
                 <p className="mt-3 text-sm leading-relaxed text-muted">
-                  Contract structure and deployment scripts look strong already. The current pass is mostly deciding how much confidence to assign to test evidence and docs quality.
+                  {focusJob?.error_message ||
+                    focusScore?.explanation ||
+                    focusMetric?.raw_metrics_json?.summary ||
+                    focusProject?.analysis_error ||
+                    "Analyze a repository to populate the saved score summary here."}
                 </p>
               </div>
             </div>
@@ -203,7 +463,7 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="mt-8 grid gap-8 xl:grid-cols-[1.3fr_0.9fr]">
+      <section className="mt-6 grid gap-6 lg:mt-8 lg:gap-8 xl:grid-cols-[1.3fr_0.9fr]">
         <div className="space-y-8">
           <section className="overflow-hidden rounded-[2rem] border border-border/70 bg-surface/40 shadow-sm backdrop-blur-xl">
             <div className="flex flex-col gap-4 border-b border-border/60 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
@@ -225,60 +485,60 @@ export default function DashboardPage() {
             </div>
 
             <div className="divide-y divide-border/50">
-              {liveProjects.map((project) => (
-                <article
-                  key={project.repo}
-                  className="grid gap-5 px-6 py-5 md:grid-cols-[1.2fr_0.7fr_160px]"
-                >
-                  <div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="text-lg font-semibold text-white">{project.repo}</h3>
-                      <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-muted">
-                        {project.branch}
+              {liveProjects.length ? (
+                liveProjects.map((project) => (
+                  <article
+                    key={project.id}
+                    className="grid gap-4 px-4 py-5 sm:px-6 md:grid-cols-[1.2fr_0.7fr_160px] md:gap-5"
+                  >
+                    <div>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <h3 className="text-lg font-semibold text-white">{project.repo}</h3>
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-muted">
+                          {project.branch}
+                        </span>
+                      </div>
+                      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
+                        {project.summary}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center">
+                      <span
+                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${statusTone(project.status)}`}
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                        {project.status}
                       </span>
                     </div>
-                    <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
-                      {project.summary}
-                    </p>
-                  </div>
 
-                  <div className="flex items-center">
-                    <span
-                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${
-                        project.status === "Stable"
-                          ? "border-emerald-400/20 bg-emerald-400/10 text-emerald-300"
-                          : project.status === "Ready for cert"
-                            ? "border-amber-400/20 bg-amber-400/10 text-amber-300"
-                            : "border-sky-400/20 bg-sky-400/10 text-sky-300"
-                      }`}
-                    >
-                      <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                      {project.status}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-start md:justify-end">
-                    {project.score !== null ? (
-                      <div className="min-w-[120px]">
-                        <p className="text-xs uppercase tracking-[0.16em] text-muted">Skill score</p>
-                        <div className="mt-2 flex items-center gap-3">
-                          <span className="text-2xl font-semibold text-white">{project.score}</span>
-                          <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
-                            <div
-                              className="h-full rounded-full bg-gradient-to-r from-accent to-amber-300"
-                              style={{ width: `${project.score}%` }}
-                            />
+                    <div className="flex items-center justify-start md:justify-end">
+                      {project.score !== null ? (
+                        <div className="min-w-[120px]">
+                          <p className="text-xs uppercase tracking-[0.16em] text-muted">Skill score</p>
+                          <div className="mt-2 flex items-center gap-3">
+                            <span className="text-2xl font-semibold text-white">{project.score}</span>
+                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-accent to-amber-300"
+                                style={{ width: `${project.score}%` }}
+                              />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ) : (
-                      <div className="min-w-[120px] rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-muted">
-                        Score pending
-                      </div>
-                    )}
-                  </div>
-                </article>
-              ))}
+                      ) : (
+                        <div className="min-w-[120px] rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-muted">
+                          Score pending
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                ))
+              ) : (
+                <div className="px-6 py-8 text-sm text-muted">
+                  No saved projects yet. Run your first repository analysis to populate the dashboard.
+                </div>
+              )}
             </div>
           </section>
 
@@ -290,9 +550,9 @@ export default function DashboardPage() {
               </div>
               <div className="mt-5 space-y-4">
                 {queue.map((item) => (
-                  <div key={item.step} className="rounded-[1.35rem] border border-white/8 bg-background/40 p-4">
+                  <div key={`${item.step}-${item.state}`} className="rounded-[1.35rem] border border-white/8 bg-background/40 p-4">
                     <div className="flex items-center justify-between gap-4">
-                      <p className="font-medium text-white">{item.step}</p>
+                      <p className="font-medium capitalize text-white">{item.step}</p>
                       <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
                         {item.state}
                       </span>
@@ -314,9 +574,13 @@ export default function DashboardPage() {
                     <Layers3 className="h-4 w-4 text-accent" />
                     Architecture consistency
                   </div>
-                  <p className="mt-3 text-3xl font-semibold tracking-tight text-white">A-</p>
+                  <p className="mt-3 text-3xl font-semibold tracking-tight text-white">
+                    {gradeFromScore(architectureAverage)}
+                  </p>
                   <p className="mt-2 text-sm leading-relaxed text-muted">
-                    The current portfolio reads as coherent rather than scattered, which is exactly what recruiters notice first.
+                    {architectureAverage !== null
+                      ? `Average architecture score across saved projects is ${architectureAverage}, giving recruiters a clearer picture of system design consistency.`
+                      : "Architecture scoring will appear here once projects are analyzed and saved."}
                   </p>
                 </div>
                 <div className="rounded-[1.4rem] border border-white/8 bg-background/40 p-4">
@@ -324,9 +588,13 @@ export default function DashboardPage() {
                     <Award className="h-4 w-4 text-amber-300" />
                     Verification readiness
                   </div>
-                  <p className="mt-3 text-3xl font-semibold tracking-tight text-white">82%</p>
+                  <p className="mt-3 text-3xl font-semibold tracking-tight text-white">
+                    {confidenceAverage !== null ? `${confidenceAverage}%` : "0%"}
+                  </p>
                   <p className="mt-2 text-sm leading-relaxed text-muted">
-                    Strong enough to showcase publicly, but still improved by more tests and crisper docs in the current queue.
+                    {confidenceAverage !== null
+                      ? "This reflects how ready the saved portfolio is for recruiter-facing proof and public verification."
+                      : "Run an analysis to start building a recruiter-facing readiness score."}
                   </p>
                 </div>
               </div>
@@ -341,18 +609,27 @@ export default function DashboardPage() {
               Next actions
             </div>
             <div className="mt-5 space-y-3">
-              {[
-                "Run one more scan after the DeFi repo docs update lands.",
-                "Generate the next certificate once current queue clears scoring.",
-                "Push a stronger testing story into the API service repo.",
-              ].map((item) => (
+              {(projects.slice(0, 3).map((project) => ({
+                key: project.id,
+                text:
+                  project.analysis_status === "failed"
+                    ? `Retry analysis for ${repoLabel(project)} and clear the saved error state.`
+                    : project.certificates?.length
+                      ? `Open certificate flow for ${repoLabel(project)} once verification is ready.`
+                      : `Review ${repoLabel(project)} and decide whether to generate a certificate next.`,
+              })) || []).map((item) => (
                 <div
-                  key={item}
+                  key={item.key}
                   className="rounded-[1.3rem] border border-white/8 bg-background/35 px-4 py-3 text-sm leading-relaxed text-muted"
                 >
-                  {item}
+                  {item.text}
                 </div>
               ))}
+              {!projects.length ? (
+                <div className="rounded-[1.3rem] border border-white/8 bg-background/35 px-4 py-3 text-sm leading-relaxed text-muted">
+                  Submit your first repository to start generating project actions.
+                </div>
+              ) : null}
             </div>
           </section>
 
@@ -362,29 +639,35 @@ export default function DashboardPage() {
               Recent certificates
             </div>
             <div className="mt-5 space-y-4">
-              {recentCertificates.map((certificate) => (
-                <div
-                  key={certificate.id}
-                  className="rounded-[1.4rem] border border-white/8 bg-background/40 p-4"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs uppercase tracking-[0.18em] text-muted">{certificate.id}</p>
-                      <p className="mt-1 font-medium text-white">{certificate.repo}</p>
+              {recentCertificates.length ? (
+                recentCertificates.map((certificate) => (
+                  <div
+                    key={certificate.id}
+                    className="rounded-[1.4rem] border border-white/8 bg-background/40 p-4"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-muted">{certificate.id}</p>
+                        <p className="mt-1 font-medium text-white">{certificate.repo}</p>
+                      </div>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
+                          certificate.status === "Verified"
+                            ? "bg-emerald-400/10 text-emerald-300"
+                            : "bg-amber-400/10 text-amber-300"
+                        }`}
+                      >
+                        {certificate.status}
+                      </span>
                     </div>
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-                        certificate.status === "Verified"
-                          ? "bg-emerald-400/10 text-emerald-300"
-                          : "bg-amber-400/10 text-amber-300"
-                      }`}
-                    >
-                      {certificate.status}
-                    </span>
+                    <p className="mt-3 text-sm text-muted">Issued {certificate.issuedAt}</p>
                   </div>
-                  <p className="mt-3 text-sm text-muted">Issued {certificate.issuedAt}</p>
+                ))
+              ) : (
+                <div className="rounded-[1.4rem] border border-white/8 bg-background/40 p-4 text-sm text-muted">
+                  No certificate records yet.
                 </div>
-              ))}
+              )}
             </div>
           </section>
         </aside>
