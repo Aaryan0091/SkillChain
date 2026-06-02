@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { motion, Variants } from "framer-motion";
 import Aurora from "../components/Aurora";
 import LiquidEther from "../components/LiquidEther";
@@ -14,6 +15,7 @@ import {
   ArrowRight,
   CheckCircle2
 } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 30 },
@@ -47,6 +49,32 @@ const steps = [
 ];
 
 export default function Home() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    const loadUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      setIsAuthenticated(Boolean(user));
+    };
+
+    void loadUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(Boolean(session?.user));
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
   return (
     <div className="relative min-h-screen overflow-hidden text-foreground">
       <div className="fixed inset-0 z-[0] pointer-events-none">
@@ -108,16 +136,18 @@ export default function Home() {
             </Link>
           </div>
           <div className="flex items-center gap-2 sm:gap-4">
-            <Link href="/login" className="hidden text-sm font-medium text-muted hover:text-white transition-colors sm:block">
-              Log In
-            </Link>
+            {!isAuthenticated ? (
+              <Link href="/login" className="hidden text-sm font-medium text-muted hover:text-white transition-colors sm:block">
+                Log In
+              </Link>
+            ) : null}
             <Link
-              href="/login"
+              href={isAuthenticated ? "/dashboard" : "/login"}
               className="group relative inline-flex items-center justify-center overflow-hidden rounded-full border border-white/20 bg-gradient-to-r from-accent to-emerald-400 px-4 py-2 text-sm font-medium text-background shadow-[0_0_20px_rgba(52,211,153,0.3)] transition-all hover:scale-105 hover:shadow-[0_0_25px_rgba(52,211,153,0.5)] active:scale-95 sm:px-5 sm:text-base"
             >
               <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
               <span className="relative z-10 flex items-center gap-2 font-bold">
-                Launch App <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                {isAuthenticated ? "Open Dashboard" : "Launch App"} <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </span>
             </Link>
           </div>

@@ -232,11 +232,51 @@ async function fetchProjectsForUser(userId) {
     .from("projects")
     .select(
       `
-      *,
-      metrics (*),
-      scores (*),
-      certificates (*),
-      analysis_jobs (*)
+      id,
+      user_id,
+      repo_url,
+      repo_name,
+      analysis_status,
+      analysis_version,
+      github_repo_id,
+      default_branch,
+      created_at,
+      last_analyzed_at,
+      analysis_error,
+      metrics (
+        id,
+        project_id,
+        analysis_version,
+        files,
+        test_ratio,
+        raw_metrics_json
+      ),
+      scores (
+        id,
+        project_id,
+        backend_score,
+        architecture_score,
+        documentation_score,
+        confidence_score,
+        explanation
+      ),
+      certificates (
+        id,
+        project_id,
+        status,
+        verification_status,
+        created_at,
+        verification_url
+      ),
+      analysis_jobs (
+        id,
+        project_id,
+        job_type,
+        status,
+        started_at,
+        finished_at,
+        error_message
+      )
     `
     )
     .eq("user_id", userId)
@@ -277,11 +317,101 @@ async function fetchProjectById(projectId, userId) {
   return data;
 }
 
+async function fetchPublicCertificates(limit = 4) {
+  const supabase = getSupabaseAdminClient();
+  const safeLimit = Math.min(Math.max(limit, 1), 12);
+
+  const { data, error } = await supabase
+    .from("certificates")
+    .select(
+      `
+      id,
+      status,
+      verification_status,
+      created_at,
+      verification_url,
+      certificate_payload,
+      certificate_hash,
+      blockchain_tx,
+      chain_id,
+      contract_address,
+      projects (
+        id,
+        repo_name,
+        repo_url,
+        default_branch,
+        analysis_status,
+        created_at,
+        last_analyzed_at,
+        metrics (*),
+        scores (*),
+        analysis_jobs (*),
+        users (
+          email
+        )
+      )
+    `
+    )
+    .order("created_at", { ascending: false })
+    .limit(safeLimit);
+
+  if (error) {
+    throw new Error(`Failed to load public certificates: ${error.message}`);
+  }
+
+  return data;
+}
+
+async function fetchPublicCertificateById(certificateId) {
+  const supabase = getSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("certificates")
+    .select(
+      `
+      id,
+      status,
+      verification_status,
+      created_at,
+      verification_url,
+      certificate_payload,
+      certificate_hash,
+      blockchain_tx,
+      chain_id,
+      contract_address,
+      projects (
+        id,
+        repo_name,
+        repo_url,
+        default_branch,
+        analysis_status,
+        created_at,
+        last_analyzed_at,
+        metrics (*),
+        scores (*),
+        analysis_jobs (*),
+        users (
+          email
+        )
+      )
+    `
+    )
+    .eq("id", certificateId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to load public certificate: ${error.message}`);
+  }
+
+  return data;
+}
+
 module.exports = {
   createAnalysisJob,
   createProjectRecord,
   fetchProjectById,
   fetchProjectsForUser,
+  fetchPublicCertificateById,
+  fetchPublicCertificates,
   markAnalysisJob,
   replaceProjectArtifacts,
   updateProjectRecord,
