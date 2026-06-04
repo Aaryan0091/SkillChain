@@ -12,6 +12,7 @@ export type MetricRecord = {
       backendFiles?: number;
       frontendFiles?: number;
     };
+    frameworks?: string[];
     summary?: string;
   } | null;
 };
@@ -22,12 +23,31 @@ export type ScoreRecord = {
   documentation_score: number | null;
   confidence_score: number | null;
   explanation: string | null;
+  score_breakdown_json?: {
+    frontend?: number;
+    codeQuality?: number;
+    security?: number;
+    strengths?: string[];
+    risks?: string[];
+    skillEvidence?: string[];
+  } | null;
 };
 
 export type CertificateRecord = {
   id: string;
   status: string | null;
   created_at: string | null;
+  verification_status?: string | null;
+  verification_url?: string | null;
+  certificate_hash?: string | null;
+  blockchain_tx?: string | null;
+  contract_address?: string | null;
+  chain_id?: string | null;
+  certificate_payload?: {
+    summary?: {
+      explanation?: string;
+    };
+  } | null;
 };
 
 export type AnalysisJobRecord = {
@@ -52,6 +72,11 @@ export type ProjectRecord = {
   scores?: ScoreRecord[];
   certificates?: CertificateRecord[];
   analysis_jobs?: AnalysisJobRecord[];
+  users?: { email?: string | null } | Array<{ email?: string | null }>;
+};
+
+export type CertificateWithProjectRecord = CertificateRecord & {
+  projects?: ProjectRecord | ProjectRecord[];
 };
 
 export async function fetchDashboardProjects() {
@@ -78,7 +103,8 @@ export async function fetchDashboardProjects() {
         architecture_score,
         documentation_score,
         confidence_score,
-        explanation
+        explanation,
+        score_breakdown_json
       ),
       certificates (
         id,
@@ -102,4 +128,56 @@ export async function fetchDashboardProjects() {
   }
 
   return (data || []) as ProjectRecord[];
+}
+
+export async function fetchDashboardCertificate(certificateId: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("certificates")
+    .select(
+      `
+      id,
+      status,
+      created_at,
+      certificate_hash,
+      blockchain_tx,
+      contract_address,
+      chain_id,
+      certificate_payload,
+      projects (
+        id,
+        repo_name,
+        repo_url,
+        analysis_status,
+        default_branch,
+        created_at,
+        last_analyzed_at,
+        analysis_error,
+        users (
+          email
+        ),
+        metrics (
+          files,
+          test_ratio,
+          raw_metrics_json
+        ),
+        scores (
+          backend_score,
+          architecture_score,
+          documentation_score,
+          confidence_score,
+          explanation,
+          score_breakdown_json
+        )
+      )
+    `
+    )
+    .eq("id", certificateId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message || "Could not load certificate.");
+  }
+
+  return (data || null) as CertificateWithProjectRecord | null;
 }

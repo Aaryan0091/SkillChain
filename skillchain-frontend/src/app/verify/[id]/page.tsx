@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   Clock,
   Code2,
+  ExternalLink,
   Fingerprint,
   GitCommit,
   ShieldAlert,
@@ -72,9 +73,9 @@ type ProjectRelation = {
 type CertificateRecord = {
   id: string;
   status: string | null;
-  verification_status: string | null;
+  verification_status?: string | null;
   created_at: string | null;
-  verification_url: string | null;
+  verification_url?: string | null;
   certificate_payload?: {
     summary?: {
       explanation?: string;
@@ -152,6 +153,10 @@ function verificationText(certificate: CertificateRecord) {
     return "Secured on Polygon";
   }
 
+  if (certificate.status === "verified") {
+    return "Secured on Polygon";
+  }
+
   if (certificate.status === "failed" || certificate.verification_status === "failed") {
     return "Verification Failed";
   }
@@ -179,7 +184,7 @@ function username(project: ProjectRelation | null) {
 
 async function fetchCertificate(certificateId: string) {
   const response = await fetch(buildSkillchainApiUrl(`/verify/${certificateId}`), {
-    cache: "no-store",
+    next: { revalidate: 60 },
   });
 
   const result = await response.json();
@@ -297,7 +302,9 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
           : "No analysis timeline available yet.",
       ];
 
-  const isVerified = certificate.verification_status === "verified";
+  const isVerified =
+    certificate.verification_status === "verified" ||
+    certificate.status === "verified";
   const overall = overallScore(score);
   const owner = ownerName(project);
   const handle = username(project);
@@ -343,6 +350,17 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
                 <span className="text-foreground/80">@{handle}</span>
               </p>
               <p className="mt-2 text-sm text-muted">{repo}</p>
+              {project?.repo_url ? (
+                <a
+                  href={project.repo_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-accent transition-colors hover:text-accent/80"
+                >
+                  View repository
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              ) : null}
             </div>
           </div>
 

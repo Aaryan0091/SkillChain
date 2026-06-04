@@ -264,9 +264,7 @@ async function fetchProjectsForUser(userId) {
         id,
         project_id,
         status,
-        verification_status,
-        created_at,
-        verification_url
+        created_at
       ),
       analysis_jobs (
         id,
@@ -327,29 +325,7 @@ async function fetchPublicCertificates(limit = 4) {
       `
       id,
       status,
-      verification_status,
-      created_at,
-      verification_url,
-      certificate_payload,
-      certificate_hash,
-      blockchain_tx,
-      chain_id,
-      contract_address,
-      projects (
-        id,
-        repo_name,
-        repo_url,
-        default_branch,
-        analysis_status,
-        created_at,
-        last_analyzed_at,
-        metrics (*),
-        scores (*),
-        analysis_jobs (*),
-        users (
-          email
-        )
-      )
+      created_at
     `
     )
     .order("created_at", { ascending: false })
@@ -370,9 +346,7 @@ async function fetchPublicCertificateById(certificateId) {
       `
       id,
       status,
-      verification_status,
       created_at,
-      verification_url,
       certificate_payload,
       certificate_hash,
       blockchain_tx,

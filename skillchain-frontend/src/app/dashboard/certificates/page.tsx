@@ -1,5 +1,9 @@
 import Link from "next/link";
-import { fetchDashboardProjects, type ProjectRecord } from "@/lib/dashboard-data";
+import {
+  fetchDashboardProjects,
+  type CertificateRecord,
+  type ProjectRecord,
+} from "@/lib/dashboard-data";
 
 function repoLabel(project: ProjectRecord) {
   if (project.repo_name?.trim()) return project.repo_name;
@@ -78,6 +82,7 @@ export default async function CertificatesPage() {
   const certificates = projects.flatMap((project) =>
     (project.certificates || []).map((certificate) => ({
       ...certificate,
+      projectId: project.id,
       repo: repoLabel(project),
       score: projectScore(project),
     }))
@@ -156,6 +161,18 @@ export default async function CertificatesPage() {
                       </div>
 
                       <div className="flex flex-wrap gap-3">
+                        <Link
+                          href={`/dashboard/certificates/${certificate.id}`}
+                          className="rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-strong"
+                        >
+                          View Certificate
+                        </Link>
+                        <Link
+                          href={`/dashboard/projects/${certificate.projectId}`}
+                          className="rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-strong"
+                        >
+                          View Project
+                        </Link>
                         <Link
                           href={`/verify/${certificate.id}`}
                           className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90"

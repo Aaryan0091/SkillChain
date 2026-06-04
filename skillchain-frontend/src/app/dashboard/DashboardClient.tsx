@@ -374,6 +374,7 @@ export default function DashboardClient() {
     .flatMap((project) =>
       (project.certificates || []).map((certificate) => ({
         id: certificate.id,
+        projectId: project.id,
         repo: repoLabel(project),
         status:
           certificate.status === "verified"
@@ -460,6 +461,15 @@ export default function DashboardClient() {
                 <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
                   {focusProject ? repoLabel(focusProject) : isLoading ? "Loading..." : "No project yet"}
                 </h2>
+                {focusProject ? (
+                  <Link
+                    href={`/dashboard/projects/${focusProject.id}`}
+                    className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-accent transition-colors hover:text-accent/80"
+                  >
+                    Open project detail
+                    <ArrowUpRight className="h-4 w-4" />
+                  </Link>
+                ) : null}
               </div>
               <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${statusTone(focusProject ? projectStatusLabel(focusProject) : "Queued")}`}>
                 <Clock3 className="h-3.5 w-3.5" />
@@ -541,7 +551,12 @@ export default function DashboardClient() {
                   >
                     <div>
                       <div className="flex flex-wrap items-center gap-3">
-                        <h3 className="text-lg font-semibold text-white">{project.repo}</h3>
+                        <Link
+                          href={`/dashboard/projects/${project.id}`}
+                          className="text-lg font-semibold text-white transition-colors hover:text-accent"
+                        >
+                          {project.repo}
+                        </Link>
                         <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-muted">
                           {project.branch}
                         </span>
@@ -700,7 +715,12 @@ export default function DashboardClient() {
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <p className="text-xs uppercase tracking-[0.18em] text-muted">{certificate.id}</p>
-                        <p className="mt-1 font-medium text-white">{certificate.repo}</p>
+                        <Link
+                          href={`/dashboard/projects/${certificate.projectId}`}
+                          className="mt-1 block font-medium text-white transition-colors hover:text-accent"
+                        >
+                          {certificate.repo}
+                        </Link>
                       </div>
                       <span
                         className={`rounded-full px-2.5 py-1 text-[11px] font-semibold ${
