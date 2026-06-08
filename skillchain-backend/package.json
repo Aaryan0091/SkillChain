@@ -4,7 +4,7 @@
   "description": "SkillChain AI backend services",
   "main": "src/index.js",
   "scripts": {
-    "dev": "node src/index.js",
+    "dev": "node --watch src/index.js",
     "dev:watch": "node --watch src/index.js",
     "start": "node src/index.js",
     "test": "echo \"No automated tests configured yet\""

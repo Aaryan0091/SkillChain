@@ -36,8 +36,10 @@ export default function DashboardLayout({
 
     const checkUser = async () => {
       const {
-        data: { user: currentUser },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const currentUser = session?.user ?? null;
 
       if (!isActive) return;
 
@@ -54,12 +56,10 @@ export default function DashboardLayout({
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async () => {
-      const {
-        data: { user: currentUser },
-      } = await supabase.auth.getUser();
-
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isActive) return;
+
+      const currentUser = session?.user ?? null;
 
       if (!currentUser) {
         router.replace("/login");

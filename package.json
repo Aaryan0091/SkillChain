@@ -7,7 +7,7 @@
     "skillchain-backend"
   ],
   "scripts": {
-    "dev": "concurrently \"npm run dev --prefix skillchain-frontend\" \"npm run dev --prefix skillchain-backend\"",
+    "dev": "concurrently --kill-others-on-fail --names frontend,backend \"npm run dev --prefix skillchain-frontend\" \"npm run dev:watch --prefix skillchain-backend\"",
     "frontend": "npm run dev --prefix skillchain-frontend",
     "backend": "npm run dev --prefix skillchain-backend",
     "build": "npm run build --prefix skillchain-frontend",

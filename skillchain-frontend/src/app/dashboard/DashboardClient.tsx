@@ -17,6 +17,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
 
 type MetricRecord = {
   files: number | null;
@@ -174,52 +175,28 @@ function latestJob(project: ProjectRecord) {
 
 async function fetchProjectsClient() {
   const supabase = createClient();
-  const { data, error } = await supabase
-    .from("projects")
-    .select(
-      `
-      id,
-      repo_name,
-      repo_url,
-      analysis_status,
-      default_branch,
-      created_at,
-      last_analyzed_at,
-      analysis_error,
-      metrics (
-        files,
-        test_ratio,
-        raw_metrics_json
-      ),
-      scores (
-        backend_score,
-        architecture_score,
-        documentation_score,
-        confidence_score,
-        explanation
-      ),
-      certificates (
-        id,
-        status,
-        created_at
-      ),
-      analysis_jobs (
-        id,
-        job_type,
-        status,
-        started_at,
-        finished_at,
-        error_message
-      )
-    `
-    )
-    .order("created_at", { ascending: false });
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (error) {
-    throw new Error(error.message || "Could not load dashboard projects.");
+  if (!session?.access_token) {
+    throw new Error("Please sign in again to load dashboard projects.");
   }
 
-  return (data || []) as ProjectRecord[];
+  const response = await fetch(buildSkillchainApiUrl("/projects"), {
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    cache: "no-store",
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Could not load dashboard projects.");
+  }
+
+  return (result.data || []) as ProjectRecord[];
 }
 
 export default function DashboardClient() {
