@@ -23,9 +23,9 @@ type PublicCertificateRecord = {
 
 const verificationSignals = [
   {
-    title: "Certificate Integrity",
+    title: "Project Certificate Integrity",
     description:
-      "Every public record maps back to a stable saved certificate payload.",
+      "Every public record maps back to one stable project certificate payload.",
     icon: <Fingerprint className="h-5 w-5 text-accent" />,
   },
   {
@@ -44,8 +44,8 @@ const verificationSignals = [
 
 const recruiterChecks = [
   "Lookup by public certificate ID",
-  "Review saved project proof without rerunning analysis",
-  "Confirm certificate and verification status quickly",
+  "Review one saved project proof without rerunning analysis",
+  "Confirm issuance and verification status quickly",
 ];
 
 function certificateTag(certificate: PublicCertificateRecord) {
@@ -129,7 +129,7 @@ export default function VerifyIndexClient() {
 
             <h2 className="mb-2 text-2xl font-bold text-white">Lookup Public Record</h2>
             <p className="mb-8 text-sm text-muted-foreground">
-              Enter a public certificate ID to open the candidate&apos;s verification page.
+              Enter a public certificate ID to open the project&apos;s verification record.
             </p>
 
             <VerifySearchForm />
@@ -176,7 +176,7 @@ export default function VerifyIndexClient() {
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
               Instead of rerunning live analysis every time, the verification experience loads a stable
-              public record with saved scores, evidence summaries, and certificate status.
+              public record with saved scores, evidence summaries, and per-project certificate status.
             </p>
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
@@ -230,7 +230,7 @@ export default function VerifyIndexClient() {
                   </p>
                   <h3 className="mt-3 text-xl font-bold text-white">{certificate.id}</h3>
                   <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                    Open the public record to inspect the saved score and verification data.
+                    Open the public record to inspect this project certificate and its saved verification data.
                   </p>
                   <p className="mt-3 text-xs font-medium uppercase tracking-[0.16em] text-white/45">
                     Issued {formatDate(certificate.created_at)}
@@ -251,7 +251,7 @@ export default function VerifyIndexClient() {
             ))
           ) : (
             <div className="rounded-[2rem] border border-white/10 bg-surface/40 p-6 text-sm text-muted-foreground shadow-lg backdrop-blur-xl sm:col-span-2">
-              No public certificate records are available yet.
+              No public project certificate records are available yet.
             </div>
           )}
         </section>

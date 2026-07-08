@@ -29,6 +29,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -76,7 +77,27 @@ export default function DashboardLayout({
     };
   }, [router]);
 
+  useEffect(() => {
+    if (!isMenuOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [isMenuOpen]);
+
   const { displayName, displayEmail, avatarLetter } = displayIdentity(user);
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setIsMenuOpen(false);
+    router.replace("/login");
+  };
 
   return (
     <div className="relative flex min-h-screen w-full">
@@ -127,12 +148,69 @@ export default function DashboardLayout({
           <Link href="/" className="text-sm font-bold uppercase tracking-widest text-accent">
             SkillChain
           </Link>
-          <button className="-mr-2 p-2 text-muted transition-transform active:scale-95">
+          <button
+            type="button"
+            aria-label="Open dashboard menu"
+            aria-expanded={isMenuOpen}
+            onClick={() => setIsMenuOpen((value) => !value)}
+            className="-mr-2 cursor-pointer rounded-xl p-2 text-muted transition-all hover:bg-white/5 hover:text-white active:scale-95"
+          >
             <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16"/></svg>
           </button>
         </header>
 
         <div className="relative z-10 flex-1">
+          {isMenuOpen ? (
+            <>
+              <button
+                type="button"
+                aria-label="Close dashboard menu"
+                onClick={() => setIsMenuOpen(false)}
+                className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+              />
+              <div className="fixed right-4 top-20 z-40 w-[min(20rem,calc(100vw-2rem))] rounded-[1.6rem] border border-border/70 bg-surface/95 p-3 shadow-[0_24px_70px_rgba(0,0,0,0.28)] backdrop-blur-2xl lg:hidden">
+                <div className="mb-3 rounded-[1.2rem] border border-border/50 bg-background/50 p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong font-bold text-white shadow-inner">
+                      {avatarLetter}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-white">{displayName}</p>
+                      <p className="truncate text-xs text-muted">{displayEmail}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <nav className="space-y-1.5">
+                  {[
+                    { href: "/dashboard", label: "Overview" },
+                    { href: "/submit", label: "Analyze Repo" },
+                    { href: "/dashboard/certificates", label: "Certificates" },
+                    { href: "/dashboard/profile", label: "Switch Profile" },
+                    { href: "/", label: "Back to Home" },
+                  ].map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setIsMenuOpen(false)}
+                      className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-medium text-white transition-colors hover:bg-white/5"
+                    >
+                      <span>{item.label}</span>
+                      <svg className="h-4 w-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+                    </Link>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={handleSignOut}
+                    className="flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-medium text-red-300 transition-colors hover:bg-red-500/10"
+                  >
+                    <span>Logout</span>
+                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a2 2 0 01-2 2H6a2 2 0 01-2-2V7a2 2 0 012-2h5a2 2 0 012 2v1"/></svg>
+                  </button>
+                </nav>
+              </div>
+            </>
+          ) : null}
           <div className="hidden px-4 pt-4 sm:px-6 md:block lg:px-8 lg:pt-6">
             <BackButton href="/" text="Back to Home" />
           </div>

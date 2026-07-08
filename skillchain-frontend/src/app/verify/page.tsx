@@ -21,18 +21,18 @@ export default function VerifyIndexPage() {
           <div className="mb-2 flex items-center gap-2 text-emerald-400">
             <ShieldCheck className="h-5 w-5" />
             <span className="text-sm font-semibold uppercase tracking-wider">
-              Public Verification
+              Project Verification
             </span>
           </div>
           <h1 className="text-4xl font-bold tracking-tight text-white md:text-5xl">
             Verify a{" "}
             <span className="bg-gradient-to-r from-accent to-emerald-400 bg-clip-text text-transparent">
-              developer proof
+              project certificate
             </span>
           </h1>
           <p className="mt-2 max-w-2xl text-lg text-muted-foreground">
-            Search a public certificate ID to inspect saved credibility signals, public skill proof,
-            and verification readiness without relying on a one-time result.
+            Search a public certificate ID to inspect one project&apos;s saved proof, score signals,
+            and verification state without rerunning analysis.
           </p>
         </div>
 

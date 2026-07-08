@@ -46,6 +46,7 @@ type ScoreRecord = {
 type CertificateRecord = {
   id: string;
   status: string | null;
+  verification_status?: string | null;
   created_at: string | null;
 };
 
@@ -121,7 +122,7 @@ function repoLabel(project: ProjectRecord) {
 function projectStatusLabel(project: ProjectRecord) {
   switch (project.analysis_status) {
     case "completed":
-      return project.certificates?.length ? "Ready for cert" : "Stable";
+      return project.certificates?.length ? "Certificate ready" : "Stable";
     case "processing":
       return "Analyzing";
     case "failed":
@@ -136,6 +137,7 @@ function statusTone(status: string) {
     case "Stable":
       return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
     case "Ready for cert":
+    case "Certificate ready":
       return "border-amber-400/20 bg-amber-400/10 text-amber-300";
     case "Analyzing":
       return "border-sky-400/20 bg-sky-400/10 text-sky-300";
@@ -171,6 +173,13 @@ function firstScore(project: ProjectRecord) {
 
 function latestJob(project: ProjectRecord) {
   return project.analysis_jobs?.[0] ?? null;
+}
+
+function certificateVerificationState(certificate: CertificateRecord) {
+  if (certificate.verification_status === "verified") return "Verified";
+  if (certificate.verification_status === "failed") return "Failed";
+  if (certificate.status === "failed") return "Failed";
+  return "Pending";
 }
 
 async function fetchProjectsClient() {
@@ -253,7 +262,7 @@ export default function DashboardClient() {
     (count, project) =>
       count +
       (project.certificates?.filter(
-        (certificate) => certificate.status === "verified"
+        (certificate) => certificate.verification_status === "verified"
       ).length || 0),
     0
   );
@@ -271,14 +280,14 @@ export default function DashboardClient() {
       accent: "from-emerald-400/35 to-transparent",
     },
     {
-      label: "Certificates minted",
+      label: "Project certificates",
       value: isLoading ? "..." : String(mintedCertificates),
       detail:
         mintedCertificates > 0
-          ? `${verifiedCertificates} verified on-chain`
+          ? `${verifiedCertificates} fully verified`
           : isLoading
             ? "Loading certificates"
-            : "0 ready yet",
+            : "0 issued yet",
       accent: "from-amber-400/35 to-transparent",
     },
     {
@@ -354,11 +363,7 @@ export default function DashboardClient() {
         projectId: project.id,
         repo: repoLabel(project),
         status:
-          certificate.status === "verified"
-            ? "Verified"
-            : certificate.status === "pending"
-              ? "Pending"
-              : certificate.status || "Pending",
+          certificateVerificationState(certificate),
         issuedAt: formatDate(certificate.created_at),
       }))
     )
@@ -387,7 +392,7 @@ export default function DashboardClient() {
               <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-muted">
                 <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
                 {isLoading
-                  ? "Loading portfolio"
+                  ? "Loading projects"
                   : loadError
                     ? "Backend unavailable"
                     : "Live project data"}
@@ -399,7 +404,7 @@ export default function DashboardClient() {
                 Your repo intelligence, arranged like a real control room.
               </h1>
               <p className="max-w-2xl text-base leading-relaxed text-muted">
-                Track what is cert-ready, what still needs stronger evidence, and where the current scan queue is spending its time.
+                Track which repositories already have project certificates, what still needs stronger evidence, and where the current scan queue is spending its time.
               </p>
               {loadError ? (
                 <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
@@ -635,7 +640,7 @@ export default function DashboardClient() {
                   </p>
                   <p className="mt-2 text-sm leading-relaxed text-muted">
                     {confidenceAverage !== null
-                      ? "This reflects how ready the saved portfolio is for recruiter-facing proof and public verification."
+                      ? "This reflects how ready your saved projects are for recruiter-facing proof and public verification."
                       : "Run an analysis to start building a recruiter-facing readiness score."}
                   </p>
                 </div>
@@ -657,8 +662,8 @@ export default function DashboardClient() {
                   project.analysis_status === "failed"
                     ? `Retry analysis for ${repoLabel(project)} and clear the saved error state.`
                     : project.certificates?.length
-                      ? `Open certificate flow for ${repoLabel(project)} once verification is ready.`
-                      : `Review ${repoLabel(project)} and decide whether to generate a certificate next.`,
+                      ? `Review the saved project certificate for ${repoLabel(project)} and share its verification record when needed.`
+                      : `Review ${repoLabel(project)} and confirm its saved analysis before issuing proof.`,
               })) || []).map((item) => (
                 <div
                   key={item.key}
@@ -680,7 +685,7 @@ export default function DashboardClient() {
           <section className="rounded-[2rem] border border-border/70 bg-surface/40 p-6 shadow-sm backdrop-blur-xl">
             <div className="flex items-center gap-2 text-sm font-semibold text-white">
               <Code2 className="h-4 w-4 text-amber-300" />
-              Recent certificates
+              Recent project certificates
             </div>
             <div className="mt-5 space-y-4">
               {recentCertificates.length ? (
@@ -714,7 +719,7 @@ export default function DashboardClient() {
                 ))
               ) : (
                 <div className="rounded-[1.4rem] border border-white/8 bg-background/40 p-4 text-sm text-muted">
-                  {isLoading ? "Loading certificate records..." : "No certificate records yet."}
+                  {isLoading ? "Loading certificate records..." : "No project certificates yet."}
                 </div>
               )}
             </div>

@@ -6,6 +6,7 @@ const {
   createProjectRecord,
   fetchProjectById,
   fetchProjectsForUser,
+  finalizeCertificateVerification,
   markAnalysisJob,
   replaceProjectArtifacts,
   updateProjectRecord,
@@ -111,7 +112,7 @@ router.post("/", async (req, res) => {
     const analysis = await analyzeRepository(repoUrl, branch);
     const repoName = analysis.repo.fullName || analysis.repo.name || repoUrl;
 
-    await replaceProjectArtifacts({
+    const certificateId = await replaceProjectArtifacts({
       projectId: project.id,
       userId: user.id,
       analysis,
@@ -133,6 +134,10 @@ router.post("/", async (req, res) => {
       finished_at: new Date().toISOString(),
       error_message: null,
     });
+
+    if (certificateId) {
+      await finalizeCertificateVerification(certificateId);
+    }
 
     const storedProject = await fetchProjectById(project.id, user.id);
 
@@ -167,6 +172,51 @@ router.post("/", async (req, res) => {
     return res.status(400).json({
       success: false,
       message: error.message || "Repository analysis failed.",
+    });
+  }
+});
+
+router.post("/:id/finalize-verification", async (req, res) => {
+  try {
+    const user = await resolveAuthenticatedUser(req);
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Missing Supabase bearer token. Send Authorization: Bearer <access_token> to finalize verification.",
+      });
+    }
+
+    const project = await fetchProjectById(req.params.id, user.id);
+
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: "Project not found.",
+      });
+    }
+
+    const certificateId = project.certificates?.[0]?.id;
+
+    if (!certificateId) {
+      return res.status(404).json({
+        success: false,
+        message: "No certificate found for this project.",
+      });
+    }
+
+    const certificate = await finalizeCertificateVerification(certificateId);
+
+    return res.json({
+      success: true,
+      message: "Project certificate verification finalized.",
+      data: certificate,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message || "Could not finalize verification.",
     });
   }
 });

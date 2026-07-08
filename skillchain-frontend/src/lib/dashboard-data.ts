@@ -47,6 +47,17 @@ export type CertificateRecord = {
     summary?: {
       explanation?: string;
     };
+    verificationBasis?: {
+      scope?: string;
+      basisVersion?: string;
+      projectBinding?: {
+        projectId?: string;
+        repoUrl?: string;
+        repoName?: string;
+        defaultBranch?: string | null;
+      };
+      checks?: string[];
+    };
   } | null;
 };
 
@@ -109,7 +120,8 @@ export async function fetchDashboardProjects() {
       certificates (
         id,
         status,
-        created_at
+        created_at,
+        verification_status
       ),
       analysis_jobs (
         id,
@@ -144,6 +156,8 @@ export async function fetchDashboardCertificate(certificateId: string) {
       contract_address,
       chain_id,
       certificate_payload,
+      verification_status,
+      verification_url,
       projects (
         id,
         repo_name,

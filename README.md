@@ -174,9 +174,33 @@ The backend now expects the following blockchain configuration:
 - `BLOCKCHAIN_RPC_URL`
 - `BLOCKCHAIN_CHAIN_ID`
 - `BLOCKCHAIN_CONTRACT_ADDRESS`
+- `BLOCKCHAIN_PRIVATE_KEY`
 - `ISSUER_WALLET_ADDRESS`
 
 For development, Polygon Amoy uses chain id `80002`.
+
+### Quick Setup For Blockchain Verification
+
+To make live certificate verification work end to end:
+
+1. Add values in `skillchain-backend/.env`
+2. Use a wallet that has gas funds on the selected chain
+3. Restart the backend
+4. Submit a new repo or reopen an old verify page
+
+Minimum required values:
+
+- `BLOCKCHAIN_RPC_URL`
+- `BLOCKCHAIN_CHAIN_ID`
+- `BLOCKCHAIN_PRIVATE_KEY`
+- `ISSUER_WALLET_ADDRESS`
+
+Optional:
+
+- `BLOCKCHAIN_CONTRACT_ADDRESS`
+
+If `BLOCKCHAIN_CONTRACT_ADDRESS` is empty, SkillChain uses the trusted-chain-record mode.
+If it is set, SkillChain sends the anchor transaction to that configured address.
 
 ## Target Architecture
 

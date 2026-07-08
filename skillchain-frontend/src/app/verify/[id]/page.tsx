@@ -1,12 +1,12 @@
 import Link from "next/link";
 import BackButton from "@/components/BackButton";
+import PublicCertificateTools from "@/components/PublicCertificateTools";
 import {
   Activity,
   Award,
   CheckCircle2,
   Clock,
   Code2,
-  ExternalLink,
   Fingerprint,
   GitCommit,
   ShieldAlert,
@@ -80,6 +80,17 @@ type CertificateRecord = {
     summary?: {
       explanation?: string;
     };
+    verificationBasis?: {
+      scope?: string;
+      basisVersion?: string;
+      projectBinding?: {
+        projectId?: string;
+        repoUrl?: string;
+        repoName?: string;
+        defaultBranch?: string | null;
+      };
+      checks?: string[];
+    };
   } | null;
   certificate_hash?: string | null;
   blockchain_tx?: string | null;
@@ -150,11 +161,11 @@ function overallScore(score: ScoreRecord | null) {
 
 function verificationText(certificate: CertificateRecord) {
   if (certificate.verification_status === "verified") {
-    return "Secured on Polygon";
+    return "Verification Complete";
   }
 
   if (certificate.status === "verified") {
-    return "Secured on Polygon";
+    return "Verification Complete";
   }
 
   if (certificate.status === "failed" || certificate.verification_status === "failed") {
@@ -230,7 +241,7 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
         </h1>
         <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted">
           {loadError ||
-            "This public verification area is active, but the provided certificate ID could not be found in our network."}
+            "This public verification area is active, but the provided project certificate ID could not be found in our network."}
         </p>
         <Link
           href="/verify"
@@ -309,6 +320,11 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
   const owner = ownerName(project);
   const handle = username(project);
   const repo = repoLabel(project);
+  const verificationChecks = certificate.certificate_payload?.verificationBasis?.checks || [
+    "This certificate is tied to one saved project record.",
+    "The score summary shown here comes from that saved project analysis.",
+    "The public verification link and hash point to the same certificate record.",
+  ];
   const integrityRef =
     certificate.blockchain_tx || certificate.certificate_hash || "Pending chain/hash reference";
 
@@ -319,88 +335,49 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
       </div>
 
       <div className="flex flex-col gap-6 lg:gap-8">
-        <header className="relative flex flex-col gap-6 overflow-hidden rounded-[2rem] border border-border/70 bg-surface/50 p-5 shadow-2xl backdrop-blur-2xl sm:gap-8 sm:rounded-[2.5rem] sm:p-8 lg:flex-row lg:items-center lg:justify-between lg:p-10">
-          <div className="absolute right-0 top-0 -z-10 h-full w-2/3 rounded-r-[2.5rem] bg-gradient-to-l from-accent/5 to-transparent blur-3xl" />
-          <div className="absolute -left-20 -top-20 -z-10 h-60 w-60 rounded-full bg-surface-strong/50 blur-3xl" />
-
-          <div className="z-10 flex items-center gap-4 sm:gap-6">
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-[1.75rem] border border-accent/30 bg-gradient-to-br from-accent/30 to-accent/5 text-accent shadow-inner">
-              <User className="h-10 w-10" strokeWidth={1.5} />
-            </div>
-            <div>
-              <div className="mb-2 flex items-center gap-3">
-                <p className="text-sm font-bold uppercase tracking-[0.2em] text-accent drop-shadow-sm">
-                  Verified Profile
-                </p>
-                {isVerified ? (
-                  <span className="flex items-center gap-1.5 rounded-full border border-accent/30 bg-accent/15 px-3 py-1 text-xs font-semibold text-accent shadow-[0_0_15px_rgba(52,211,153,0.2)]">
-                    <ShieldCheck className="h-3.5 w-3.5" /> On-Chain Record
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1.5 rounded-full border border-accent-strong/30 bg-accent-strong/15 px-3 py-1 text-xs font-semibold text-accent-strong shadow-[0_0_15px_rgba(245,158,11,0.2)]">
-                    <ShieldAlert className="h-3.5 w-3.5" /> Pending Finality
-                  </span>
-                )}
+        <header className="rounded-[2.5rem] border border-border/70 bg-surface/50 p-6 shadow-xl backdrop-blur-2xl sm:p-8">
+          <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-[1.5rem] border border-accent/30 bg-accent/10 text-accent">
+                <User className="h-8 w-8" strokeWidth={1.5} />
               </div>
-              <h1 className="text-3xl font-extrabold tracking-tight text-foreground drop-shadow-md sm:text-4xl lg:text-5xl">
-                {owner}
-              </h1>
-              <p className="mt-3 flex items-center gap-2 text-sm font-medium text-muted">
-                {certificate.id} <span className="mx-1 text-xs opacity-40">●</span>
-                <span className="text-foreground/80">@{handle}</span>
-              </p>
-              <p className="mt-2 text-sm text-muted">{repo}</p>
-              {project?.repo_url ? (
-                <a
-                  href={project.repo_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-accent transition-colors hover:text-accent/80"
-                >
-                  View repository
-                  <ExternalLink className="h-4 w-4" />
-                </a>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="z-10 flex shrink-0 items-center justify-center gap-4 rounded-[1.5rem] border border-border/80 bg-background/80 p-4 shadow-xl backdrop-blur-xl transition-transform duration-300 hover:scale-[1.02] sm:gap-6 sm:rounded-[2rem] sm:p-6">
-            <div className="relative flex h-28 w-28 items-center justify-center">
-              <svg className="h-full w-full -rotate-90 transform drop-shadow-lg" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="42" fill="none" className="stroke-border/40" strokeWidth="8" />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="42"
-                  fill="none"
-                  className="stroke-accent drop-shadow-[0_0_12px_rgba(52,211,153,0.6)]"
-                  strokeWidth="8"
-                  strokeLinecap="round"
-                  strokeDasharray={`${(overall / 100) * 264} 264`}
-                  style={{ transition: "stroke-dasharray 1.5s ease-out" }}
-                />
-              </svg>
-              <div className="absolute flex flex-col items-center justify-center">
-                <span className="text-4xl font-black text-foreground drop-shadow-md">{overall}</span>
+              <div>
+                <div className="mb-2 flex flex-wrap items-center gap-3">
+                  <p className="text-sm font-bold uppercase tracking-[0.2em] text-accent">
+                    Public Verification
+                  </p>
+                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${isVerified ? "border-accent/30 bg-accent/15 text-accent" : "border-[#a8f5e9]/30 bg-[#a8f5e9]/10 text-[#a8f5e9]"}`}>
+                    {isVerified ? "Verified" : "Pending"}
+                  </span>
+                </div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
+                  {owner}
+                </h1>
+                <p className="mt-2 text-sm text-muted">@{handle}</p>
+                <p className="mt-2 text-sm text-muted">{repo}</p>
               </div>
             </div>
-            <div className="flex flex-col justify-center pr-2">
-              <p className="mb-1 flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-muted">
-                <Trophy className="h-3.5 w-3.5 text-accent" /> Developer Rank
+
+            <div className="rounded-[1.75rem] border border-white/10 bg-background/75 px-6 py-5 text-center">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted">
+                Score
               </p>
-              <p className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-3xl font-extrabold text-transparent drop-shadow-sm">
+              <p className="mt-2 text-5xl font-black text-foreground">{overall}</p>
+              <p className="mt-2 text-sm font-semibold text-accent">
                 {overall >= 90 ? "S-Tier" : overall >= 80 ? "A-Tier" : overall >= 70 ? "B-Tier" : "C-Tier"}
-              </p>
-              <p className="mt-1 max-w-[130px] text-xs font-medium leading-snug text-muted/80">
-                Saved score profile across the analyzed repository
               </p>
             </div>
           </div>
         </header>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-12 lg:gap-8">
-          <div className="flex flex-col gap-6 md:col-span-8 lg:gap-8">
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-5">
+        <PublicCertificateTools
+          certificateId={certificate.id}
+          verificationUrl={certificate.verification_url}
+        />
+
+        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
               {statCards.map((stat, i) => {
                 const icons = [Code2, Award, GitCommit, Activity];
                 const Icon = icons[i % icons.length];
@@ -426,18 +403,11 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
               })}
             </div>
 
-            <section className="rounded-[2rem] border border-border/80 bg-surface/50 p-8 shadow-xl backdrop-blur-md">
-              <div className="mb-8 flex items-center justify-between">
-                <div>
-                  <h2 className="flex items-center gap-2.5 text-2xl font-extrabold tracking-tight text-foreground">
-                    <Activity className="h-6 w-6 text-accent" /> Skill Topography
-                  </h2>
-                  <p className="mt-2 text-sm font-medium text-muted">
-                    Saved technical scoring pulled from the repository analysis record.
-                  </p>
-                </div>
-              </div>
-
+            <section className="rounded-[2rem] border border-border/80 bg-surface/50 p-6 shadow-sm backdrop-blur-md">
+              <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
+                <Activity className="h-5 w-5 text-accent" />
+                Score Breakdown
+              </h2>
               <div className="space-y-7">
                 {skillBreakdown.map((skill) => (
                   <div key={skill.label} className="group cursor-default">
@@ -462,11 +432,11 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
             </section>
           </div>
 
-          <div className="flex flex-col gap-6 md:col-span-4 lg:gap-8">
-            <section className="group relative overflow-hidden rounded-[2rem] border border-border/80 bg-surface/50 p-7 shadow-xl backdrop-blur-md transition-colors duration-300 hover:border-accent/30">
-              <div className="absolute right-0 top-0 h-40 w-40 translate-x-1/3 -translate-y-1/3 rounded-full bg-accent/10 blur-[50px] transition-colors duration-500 group-hover:bg-accent/20" />
-              <h2 className="mb-6 flex items-center gap-2.5 text-xl font-extrabold tracking-tight text-foreground">
-                <Fingerprint className="h-6 w-6 text-muted transition-colors group-hover:text-accent" /> Source Integrity
+          <div className="space-y-6">
+            <section className="rounded-[2rem] border border-border/80 bg-surface/50 p-6 shadow-sm backdrop-blur-md">
+              <h2 className="mb-5 flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
+                <Fingerprint className="h-5 w-5 text-accent" />
+                Verification Summary
               </h2>
               <div className="space-y-5 text-sm">
                 <div className="rounded-2xl border border-border/60 bg-background/60 p-4.5 shadow-sm">
@@ -492,21 +462,34 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
                   </p>
                   <p className="text-sm font-bold text-foreground">{formatDate(certificate.created_at)}</p>
                 </div>
+                <div className="rounded-2xl border border-[#a8f5e9]/25 bg-[#a8f5e9]/8 p-4.5 shadow-sm">
+                  <p className="mb-1.5 text-[11px] font-extrabold uppercase tracking-widest text-[#a8f5e9]">
+                    Verification Basis
+                  </p>
+                  <ul className="space-y-2">
+                    {verificationChecks.map((item, index) => (
+                      <li key={`${item}-${index}`} className="text-sm font-medium text-foreground/85">
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </section>
 
-            <section className="flex-1 rounded-[2rem] border border-border/80 bg-surface/50 p-7 shadow-xl backdrop-blur-md">
-              <h2 className="mb-6 flex items-center gap-2.5 text-xl font-extrabold tracking-tight text-foreground">
-                <Trophy className="h-6 w-6 text-accent-strong drop-shadow-sm" /> Milestones
+            <section className="rounded-[2rem] border border-border/80 bg-surface/50 p-6 shadow-sm backdrop-blur-md">
+              <h2 className="mb-5 flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
+                <Trophy className="h-5 w-5 text-accent-strong" />
+                Highlights
               </h2>
-              <ul className="space-y-4.5">
+              <ul className="space-y-4">
                 {achievements.length ? (
                   achievements.map((item, i) => (
-                    <li key={`${item}-${i}`} className="group flex items-start gap-3.5">
-                      <div className="mt-0.5 shrink-0 rounded-full border border-accent/20 bg-accent/10 p-1 transition-transform group-hover:scale-110">
+                    <li key={`${item}-${i}`} className="flex items-start gap-3">
+                      <div className="mt-0.5 shrink-0 rounded-full border border-accent/20 bg-accent/10 p-1">
                         <CheckCircle2 className="h-3.5 w-3.5 text-accent" />
                       </div>
-                      <span className="text-sm font-medium leading-relaxed text-muted transition-colors group-hover:text-foreground/90">
+                      <span className="text-sm font-medium leading-relaxed text-muted">
                         {item}
                       </span>
                     </li>
@@ -515,17 +498,16 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
                   <li className="text-sm text-muted">No milestone items available yet.</li>
                 )}
               </ul>
-
-              <hr className="my-7 border-border/60" />
-
-              <h2 className="mb-6 flex items-center gap-2.5 text-xl font-extrabold tracking-tight text-foreground">
-                <TrendingUp className="h-6 w-6 text-blue-400 drop-shadow-sm" /> Growth Trajectory
+              <hr className="my-6 border-border/60" />
+              <h2 className="mb-5 flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
+                <TrendingUp className="h-5 w-5 text-blue-400" />
+                Timeline Notes
               </h2>
-              <ul className="space-y-4.5">
+              <ul className="space-y-4">
                 {[...strengths.slice(0, 2), ...progress.slice(0, 3), ...risks.slice(0, 1)].map((item, i) => (
-                  <li key={`${item}-${i}`} className="group flex items-start gap-3">
-                    <div className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)] transition-transform group-hover:scale-150" />
-                    <span className="text-sm font-medium leading-relaxed text-muted transition-colors group-hover:text-foreground/90">
+                  <li key={`${item}-${i}`} className="flex items-start gap-3">
+                    <div className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-blue-400 shadow-[0_0_8px_rgba(96,165,250,0.6)]" />
+                    <span className="text-sm font-medium leading-relaxed text-muted">
                       {item}
                     </span>
                   </li>
@@ -534,28 +516,6 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
             </section>
           </div>
         </div>
-
-        <section className="mt-4 flex flex-col items-center justify-center rounded-[2.5rem] border border-border/70 bg-gradient-to-b from-surface/30 to-surface/50 p-10 text-center shadow-lg backdrop-blur-xl">
-          <p className="mb-6 text-sm font-extrabold uppercase tracking-[0.25em] text-muted">
-            Explore Directory
-          </p>
-          <div className="flex max-w-2xl flex-wrap justify-center gap-3.5">
-            {certificate.verification_url ? (
-              <a
-                href={certificate.verification_url}
-                className="rounded-full border border-border/80 bg-background/60 px-6 py-2.5 text-xs font-bold text-foreground transition-all duration-300 hover:scale-105 hover:border-accent hover:bg-surface hover:text-accent hover:shadow-[0_0_15px_rgba(52,211,153,0.15)]"
-              >
-                Public Link
-              </a>
-            ) : null}
-            <Link
-              href="/verify"
-              className="rounded-full border border-border/80 bg-background/60 px-6 py-2.5 text-xs font-bold text-foreground transition-all duration-300 hover:scale-105 hover:border-accent hover:bg-surface hover:text-accent hover:shadow-[0_0_15px_rgba(52,211,153,0.15)]"
-            >
-              Back to Search
-            </Link>
-          </div>
-        </section>
       </div>
     </main>
   );

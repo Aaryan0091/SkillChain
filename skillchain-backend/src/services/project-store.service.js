@@ -1,5 +1,14 @@
 const crypto = require("node:crypto");
 const { getSupabaseAdminClient } = require("../lib/supabase");
+const {
+  anchorCertificateHash,
+  isBlockchainConfigured,
+  readAnchoredHash,
+} = require("./blockchain.service");
+
+function hashCertificatePayload(payload) {
+  return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+}
 
 function buildMetricsPayload(analysis) {
   const { basis, deterministic } = analysis;
@@ -75,15 +84,28 @@ function buildCertificatePayload({ projectId, userId, analysis, frontendUrl }) {
     summary: {
       explanation: analysis.summary,
     },
+    verificationBasis: {
+      scope: "project",
+      basisVersion: "v1",
+      projectBinding: {
+        projectId,
+        repoUrl: analysis.repo.htmlUrl,
+        repoName: analysis.repo.fullName,
+        defaultBranch: analysis.repo.defaultBranch || analysis.repo.branch || null,
+      },
+      checks: [
+        "This certificate is tied to one saved project record.",
+        "Its score summary comes from the repository analysis saved for that project.",
+        "Its public verification link points to the same certificate payload and hash.",
+        "Blockchain verification status is tracked separately from certificate issuance.",
+      ],
+    },
     verification: {
       verificationUrl,
     },
   };
 
-  const certificateHash = crypto
-    .createHash("sha256")
-    .update(JSON.stringify(payload))
-    .digest("hex");
+  const certificateHash = hashCertificatePayload(payload);
 
   return {
     id: certificateId,
@@ -91,7 +113,7 @@ function buildCertificatePayload({ projectId, userId, analysis, frontendUrl }) {
     certificate_payload_version: "v1",
     certificate_hash: certificateHash,
     verification_url: verificationUrl,
-    status: "pending",
+    status: "issued",
     verification_status: "pending",
     chain_id: null,
     blockchain_tx: null,
@@ -164,6 +186,15 @@ async function updateProjectRecord(projectId, values) {
   }
 }
 
+async function updateCertificateRecord(certificateId, values) {
+  const supabase = getSupabaseAdminClient();
+  const { error } = await supabase.from("certificates").update(values).eq("id", certificateId);
+
+  if (error) {
+    throw new Error(`Failed to update certificate record: ${error.message}`);
+  }
+}
+
 async function replaceProjectArtifacts({ projectId, userId, analysis, frontendUrl }) {
   const supabase = getSupabaseAdminClient();
 
@@ -224,6 +255,8 @@ async function replaceProjectArtifacts({ projectId, userId, analysis, frontendUr
   if (certificateError) {
     throw new Error(`Failed to store certificate placeholder: ${certificateError.message}`);
   }
+
+  return certificatePayload.id;
 }
 
 async function fetchProjectsForUser(userId) {
@@ -264,7 +297,8 @@ async function fetchProjectsForUser(userId) {
         id,
         project_id,
         status,
-        created_at
+        created_at,
+        verification_status
       ),
       analysis_jobs (
         id,
@@ -325,7 +359,8 @@ async function fetchPublicCertificates(limit = 4) {
       `
       id,
       status,
-      created_at
+      created_at,
+      verification_status
     `
     )
     .order("created_at", { ascending: false })
@@ -347,6 +382,8 @@ async function fetchPublicCertificateById(certificateId) {
       id,
       status,
       created_at,
+      verification_status,
+      verification_url,
       certificate_payload,
       certificate_hash,
       blockchain_tx,
@@ -379,6 +416,68 @@ async function fetchPublicCertificateById(certificateId) {
   return data;
 }
 
+async function finalizeCertificateVerification(certificateId) {
+  const certificate = await fetchPublicCertificateById(certificateId);
+
+  if (!certificate) {
+    return null;
+  }
+
+  const project = Array.isArray(certificate.projects)
+    ? certificate.projects[0] ?? null
+    : certificate.projects ?? null;
+
+  const payload = certificate.certificate_payload || null;
+  const expectedHash = payload ? hashCertificatePayload(payload) : null;
+  const currentHash = certificate.certificate_hash || null;
+  const hasMatchingHash =
+    Boolean(expectedHash) && Boolean(currentHash) && expectedHash === currentHash;
+  const hasVerificationUrl = Boolean(certificate.verification_url);
+  const projectCompleted = project?.analysis_status === "completed";
+
+  let verificationStatus = "pending";
+  let status = certificate.status || "issued";
+  let blockchainTx = certificate.blockchain_tx || null;
+  let chainId = certificate.chain_id || null;
+  let contractAddress = certificate.contract_address || null;
+
+  if (hasMatchingHash && hasVerificationUrl && projectCompleted) {
+    if (isBlockchainConfigured()) {
+      if (!blockchainTx) {
+        const anchor = await anchorCertificateHash({
+          certificateHash: expectedHash,
+        });
+
+        blockchainTx = anchor.transactionHash;
+        chainId = anchor.chainId;
+        contractAddress = anchor.anchorAddress;
+      }
+
+      const anchored = await readAnchoredHash(blockchainTx);
+      verificationStatus =
+        anchored.anchoredHash === expectedHash ? "verified" : "mismatch";
+    } else {
+      verificationStatus = "pending";
+    }
+
+    status = status === "failed" ? "issued" : status;
+  } else if (!hasMatchingHash) {
+    verificationStatus = "mismatch";
+  } else {
+    verificationStatus = "failed";
+  }
+
+  await updateCertificateRecord(certificateId, {
+    status,
+    verification_status: verificationStatus,
+    blockchain_tx: blockchainTx,
+    chain_id: chainId,
+    contract_address: contractAddress,
+  });
+
+  return fetchPublicCertificateById(certificateId);
+}
+
 module.exports = {
   createAnalysisJob,
   createProjectRecord,
@@ -386,7 +485,9 @@ module.exports = {
   fetchProjectsForUser,
   fetchPublicCertificateById,
   fetchPublicCertificates,
+  finalizeCertificateVerification,
   markAnalysisJob,
   replaceProjectArtifacts,
+  updateCertificateRecord,
   updateProjectRecord,
 };

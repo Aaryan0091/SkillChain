@@ -123,14 +123,27 @@ function titleCase(value: string) {
 function statusTone(status: string) {
   switch (status) {
     case "completed":
+    case "issued":
       return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
     case "processing":
       return "border-sky-400/20 bg-sky-400/10 text-sky-300";
     case "failed":
       return "border-red-400/20 bg-red-400/10 text-red-300";
+    case "verified":
+      return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
+    case "pending":
+      return "border-amber-400/20 bg-amber-400/10 text-amber-300";
     default:
       return "border-white/10 bg-white/5 text-muted";
   }
+}
+
+function certificateBadgeState(certificate: CertificateRecord) {
+  if (certificate.verification_status === "verified") return "verified";
+  if (certificate.verification_status === "failed") return "failed";
+  if (certificate.status === "failed") return "failed";
+  if (certificate.status === "issued") return "issued";
+  return certificate.status || "pending";
 }
 
 function average(values: Array<number | null | undefined>) {
@@ -343,7 +356,7 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                 {score?.explanation ||
                   metric?.raw_metrics_json?.summary ||
                   project.analysis_error ||
-                  "This repository has been saved and can now feed certificates and public verification."}
+                  "This repository has been saved and now has its own project-level certificate and verification record."}
               </p>
 
               <div className="flex flex-wrap gap-3 text-sm text-muted">
@@ -372,7 +385,7 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                     href={`/verify/${certificates[0].id}`}
                     className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
                   >
-                    Open Public Verify
+                    Open verification record
                     <ArrowUpRight className="h-4 w-4" />
                   </Link>
                 ) : null}
@@ -544,7 +557,7 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
           <section className="rounded-[2rem] border border-border/70 bg-surface/40 p-6 shadow-sm backdrop-blur-xl">
             <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-white">
               <Fingerprint className="h-5 w-5 text-accent" />
-              Certificates
+              Project certificates
             </h2>
             <div className="mt-5 space-y-4">
               {certificates.length ? (
@@ -555,8 +568,8 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                   >
                     <p className="text-xs uppercase tracking-[0.16em] text-muted">{certificate.id}</p>
                     <div className="mt-3 flex items-center justify-between gap-3">
-                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusTone(certificate.status || "pending")}`}>
-                        {titleCase(certificate.status || "pending")}
+                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusTone(certificateBadgeState(certificate))}`}>
+                        {titleCase(certificate.verification_status || certificate.status || "pending")}
                       </span>
                       <div className="flex items-center gap-3">
                         <Link
@@ -569,7 +582,7 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                           href={`/verify/${certificate.id}`}
                           className="text-sm font-semibold text-accent transition-colors hover:text-accent/80"
                         >
-                          Open verify
+                          Open verification record
                         </Link>
                       </div>
                     </div>
@@ -582,7 +595,7 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                   </article>
                 ))
               ) : (
-                <p className="text-sm text-muted">No certificate records yet.</p>
+                <p className="text-sm text-muted">No project certificates yet.</p>
               )}
             </div>
           </section>

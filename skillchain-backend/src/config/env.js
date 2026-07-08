@@ -9,6 +9,7 @@ const env = {
   blockchainRpcUrl: process.env.BLOCKCHAIN_RPC_URL || "",
   blockchainChainId: process.env.BLOCKCHAIN_CHAIN_ID || "80002",
   blockchainContractAddress: process.env.BLOCKCHAIN_CONTRACT_ADDRESS || "",
+  blockchainPrivateKey: process.env.BLOCKCHAIN_PRIVATE_KEY || "",
   issuerWalletAddress: process.env.ISSUER_WALLET_ADDRESS || "",
 };
 
