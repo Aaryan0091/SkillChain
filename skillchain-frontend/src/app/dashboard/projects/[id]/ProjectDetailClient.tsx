@@ -16,6 +16,7 @@ import {
   ShieldAlert,
   ShieldCheck,
   Sparkles,
+  Trash2,
   TrendingUp,
 } from "lucide-react";
 import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
@@ -182,11 +183,37 @@ async function fetchProject(projectId: string) {
   return result.data as ProjectRecord;
 }
 
+async function deleteProjectClient(projectId: string) {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error("Please sign in again to remove this project.");
+  }
+
+  const response = await fetch(buildSkillchainApiUrl(`/projects/${projectId}`), {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Could not remove project.");
+  }
+}
+
 export default function ProjectDetailClient({ projectId }: { projectId: string }) {
   const router = useRouter();
   const [project, setProject] = useState<ProjectRecord | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showRemoveModal, setShowRemoveModal] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -324,8 +351,64 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
     },
   ];
 
+  async function handleRemoveProject() {
+    setIsRemoving(true);
+    setLoadError(null);
+
+    try {
+      await deleteProjectClient(projectId);
+      router.push("/dashboard");
+    } catch (error) {
+      setIsRemoving(false);
+      setShowRemoveModal(false);
+      setLoadError(
+        error instanceof Error ? error.message : "Could not remove project."
+      );
+    }
+  }
+
   return (
     <main className="w-full px-4 pb-12 pt-4 sm:px-6 sm:pb-14 lg:px-8 lg:pb-16">
+      {showRemoveModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-surface/95 p-6 shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300">
+              Confirm removal
+            </p>
+            <h3 className="mt-3 text-2xl font-semibold text-white">
+              Remove this saved repository?
+            </h3>
+            <p className="mt-3 text-sm leading-relaxed text-muted">
+              This will remove <span className="font-semibold text-white">{project.repo_name}</span>{" "}
+              from your saved projects and it will no longer appear in your recent repository reads.
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              Its linked saved metrics, scores, jobs, and certificate records will also be deleted.
+            </p>
+
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowRemoveModal(false)}
+                disabled={isRemoving}
+                className="inline-flex cursor-pointer items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleRemoveProject}
+                disabled={isRemoving}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-200 transition-colors hover:bg-red-400/15 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Trash2 className="h-4 w-4" />
+                {isRemoving ? "Removing..." : "Yes, remove it"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       <section className="relative overflow-hidden rounded-[2.5rem] border border-border/70 bg-surface/50 shadow-[0_24px_70px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,0.16),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(59,130,246,0.14),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.03),transparent_58%)]" />
 
@@ -389,6 +472,14 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                     <ArrowUpRight className="h-4 w-4" />
                   </Link>
                 ) : null}
+                <button
+                  type="button"
+                  onClick={() => setShowRemoveModal(true)}
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-200 transition-colors hover:bg-red-400/15"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Remove repo
+                </button>
               </div>
             </div>
 
@@ -514,6 +605,59 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
               )}
             </div>
           </section>
+
+          <section className="rounded-[2rem] border border-border/70 bg-surface/40 p-6 shadow-sm backdrop-blur-xl">
+            <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-white">
+              <Fingerprint className="h-5 w-5 text-accent" />
+              Verification record
+            </h2>
+            <div className="mt-5 space-y-4">
+              {certificates.length ? (
+                certificates.map((certificate) => (
+                  <article
+                    key={certificate.id}
+                    className="rounded-[1.3rem] border border-white/8 bg-background/40 p-4"
+                  >
+                    <p className="text-xs uppercase tracking-[0.16em] text-muted">
+                      Public certificate ID
+                    </p>
+                    <p className="mt-2 break-all rounded-xl border border-white/8 bg-white/5 p-3 font-mono text-[12px] text-white/90">
+                      {certificate.id}
+                    </p>
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusTone(certificateBadgeState(certificate))}`}>
+                        {titleCase(certificate.verification_status || certificate.status || "pending")}
+                      </span>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <Link
+                          href={`/dashboard/certificates/${certificate.id}`}
+                          className="text-sm font-semibold text-white transition-colors hover:text-accent"
+                        >
+                          View certificate
+                        </Link>
+                        <Link
+                          href={`/verify/${certificate.id}`}
+                          className="text-sm font-semibold text-accent transition-colors hover:text-accent/80"
+                        >
+                          Open verification record
+                        </Link>
+                      </div>
+                    </div>
+                    <p className="mt-3 text-xs text-muted">
+                      Issued {formatDate(certificate.created_at)}
+                    </p>
+                    {certificate.certificate_hash ? (
+                      <p className="mt-3 break-all rounded-xl border border-white/8 bg-white/5 p-2 font-mono text-[11px] text-white/80">
+                        {certificate.certificate_hash}
+                      </p>
+                    ) : null}
+                  </article>
+                ))
+              ) : (
+                <p className="text-sm text-muted">No verification record has been saved yet.</p>
+              )}
+            </div>
+          </section>
         </div>
 
         <aside className="space-y-6">
@@ -550,52 +694,6 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                 ))
               ) : (
                 <p className="text-sm text-muted">No saved jobs yet.</p>
-              )}
-            </div>
-          </section>
-
-          <section className="rounded-[2rem] border border-border/70 bg-surface/40 p-6 shadow-sm backdrop-blur-xl">
-            <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-white">
-              <Fingerprint className="h-5 w-5 text-accent" />
-              Project certificates
-            </h2>
-            <div className="mt-5 space-y-4">
-              {certificates.length ? (
-                certificates.map((certificate) => (
-                  <article
-                    key={certificate.id}
-                    className="rounded-[1.3rem] border border-white/8 bg-background/40 p-4"
-                  >
-                    <p className="text-xs uppercase tracking-[0.16em] text-muted">{certificate.id}</p>
-                    <div className="mt-3 flex items-center justify-between gap-3">
-                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusTone(certificateBadgeState(certificate))}`}>
-                        {titleCase(certificate.verification_status || certificate.status || "pending")}
-                      </span>
-                      <div className="flex items-center gap-3">
-                        <Link
-                          href={`/dashboard/certificates/${certificate.id}`}
-                          className="text-sm font-semibold text-white transition-colors hover:text-accent"
-                        >
-                          View certificate
-                        </Link>
-                        <Link
-                          href={`/verify/${certificate.id}`}
-                          className="text-sm font-semibold text-accent transition-colors hover:text-accent/80"
-                        >
-                          Open verification record
-                        </Link>
-                      </div>
-                    </div>
-                    <p className="mt-3 text-xs text-muted">Issued {formatDate(certificate.created_at)}</p>
-                    {certificate.certificate_hash ? (
-                      <p className="mt-3 break-all rounded-xl border border-white/8 bg-white/5 p-2 font-mono text-[11px] text-white/80">
-                        {certificate.certificate_hash}
-                      </p>
-                    ) : null}
-                  </article>
-                ))
-              ) : (
-                <p className="text-sm text-muted">No project certificates yet.</p>
               )}
             </div>
           </section>

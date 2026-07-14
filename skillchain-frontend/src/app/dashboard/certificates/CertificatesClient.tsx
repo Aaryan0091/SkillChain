@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, startTransition } from "react";
+import { Trash2 } from "lucide-react";
 import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
 import { createClient } from "@/utils/supabase/client";
 
@@ -26,6 +27,12 @@ type ProjectRecord = {
   scores?: ScoreRecord[];
   certificates?: CertificateRecord[];
 };
+
+type PendingRemoval = {
+  certificateId: string;
+  projectId: string;
+  repo: string;
+} | null;
 
 function repoLabel(project: ProjectRecord) {
   if (project.repo_name?.trim()) return project.repo_name;
@@ -112,10 +119,40 @@ async function fetchProjectsClient() {
   return (result.data || []) as ProjectRecord[];
 }
 
+async function deleteCertificateClient(certificateId: string) {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error("Please sign in again to remove this certificate.");
+  }
+
+  const response = await fetch(
+    buildSkillchainApiUrl(`/projects/certificates/${certificateId}`),
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    }
+  );
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Could not remove certificate.");
+  }
+}
+
 export default function CertificatesClient() {
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [removingCertificateId, setRemovingCertificateId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -154,6 +191,40 @@ export default function CertificatesClient() {
     }))
   );
 
+  async function confirmRemoveCertificate() {
+    if (!pendingRemoval) return;
+
+    const { certificateId, projectId } = pendingRemoval;
+    setRemovingCertificateId(certificateId);
+    setActionError(null);
+
+    try {
+      await deleteCertificateClient(certificateId);
+
+      startTransition(() => {
+        setProjects((currentProjects) =>
+          currentProjects.map((project) =>
+            project.id === projectId
+              ? {
+                  ...project,
+                  certificates: (project.certificates || []).filter(
+                    (certificate) => certificate.id !== certificateId
+                  ),
+                }
+              : project
+          )
+        );
+        setRemovingCertificateId(null);
+        setPendingRemoval(null);
+      });
+    } catch (error) {
+      setRemovingCertificateId(null);
+      setActionError(
+        error instanceof Error ? error.message : "Could not remove certificate."
+      );
+    }
+  }
+
   return (
     <main className="mb-16 w-full animate-in fade-in slide-in-from-bottom-4 px-4 pt-4 pb-10 duration-500 sm:px-6 sm:pb-14 lg:px-8 lg:pb-16">
       <section className="mb-10 space-y-3">
@@ -171,7 +242,55 @@ export default function CertificatesClient() {
             {loadError}
           </p>
         ) : null}
+        {actionError ? (
+          <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            {actionError}
+          </p>
+        ) : null}
       </section>
+
+      {pendingRemoval ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-surface/95 p-6 shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300">
+              Confirm removal
+            </p>
+            <h3 className="mt-3 text-2xl font-semibold text-white">
+              Remove this certificate?
+            </h3>
+            <p className="mt-3 text-sm leading-relaxed text-muted">
+              This will remove the issued certificate for{" "}
+              <span className="font-semibold text-white">{pendingRemoval.repo}</span> from your
+              profile certificate list.
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              The project record will stay saved, but this certificate row will be deleted.
+            </p>
+
+            <div className="mt-6 flex flex-wrap justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setPendingRemoval(null)}
+                disabled={removingCertificateId === pendingRemoval.certificateId}
+                className="inline-flex cursor-pointer items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmRemoveCertificate}
+                disabled={removingCertificateId === pendingRemoval.certificateId}
+                className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-200 transition-colors hover:bg-red-400/15 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Trash2 className="h-4 w-4" />
+                {removingCertificateId === pendingRemoval.certificateId
+                  ? "Removing..."
+                  : "Yes, remove it"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr] lg:gap-6">
         <div className="rounded-[2rem] border border-border/70 bg-surface/50 p-6 shadow-sm backdrop-blur-xl">
@@ -259,6 +378,23 @@ export default function CertificatesClient() {
                         >
                           Open Verification Record
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPendingRemoval({
+                              certificateId: certificate.id,
+                              projectId: certificate.projectId,
+                              repo: certificate.repo,
+                            })
+                          }
+                          disabled={removingCertificateId === certificate.id}
+                          className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-200 transition-colors hover:bg-red-400/15 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          {removingCertificateId === certificate.id
+                            ? "Removing..."
+                            : "Remove Certificate"}
+                        </button>
                       </div>
                     </div>
                   </article>

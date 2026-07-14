@@ -44,9 +44,29 @@ async function githubRequest(path) {
     headers.Authorization = `Bearer ${env.githubToken}`;
   }
 
-  const response = await fetch(`${GITHUB_API_BASE}${path}`, { headers });
+  let response = await fetch(`${GITHUB_API_BASE}${path}`, { headers });
+
+  // If the configured token is expired or revoked, retry as a public request
+  // so public repositories can still be analyzed.
+  if (response.status === 401 && env.githubToken) {
+    const fallbackHeaders = {
+      Accept: "application/vnd.github+json",
+      "User-Agent": "skillchain-ai-analyzer",
+      "X-GitHub-Api-Version": "2022-11-28",
+    };
+
+    response = await fetch(`${GITHUB_API_BASE}${path}`, { headers: fallbackHeaders });
+  }
 
   if (!response.ok) {
+    if (response.status === 401) {
+      throw new Error(
+        env.githubToken
+          ? "Configured GITHUB_TOKEN is invalid or expired. Replace it in skillchain-backend/.env, or submit a public repository without relying on the token."
+          : "GitHub rejected the request. Add a valid GITHUB_TOKEN in skillchain-backend/.env or try again with a public repository."
+      );
+    }
+
     if (response.status === 404) {
       throw new Error("Repository not found or not publicly accessible.");
     }

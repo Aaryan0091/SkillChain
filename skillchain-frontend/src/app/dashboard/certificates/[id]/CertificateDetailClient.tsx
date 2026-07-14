@@ -2,79 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useState, startTransition } from "react";
+import { Expand, X } from "lucide-react";
 import BackButton from "@/components/BackButton";
 import SkillCertificateView from "@/components/SkillCertificateView";
 import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
 import type { CertificateWithProjectRecord } from "@/lib/dashboard-data";
-import { createClient } from "@/utils/supabase/client";
-
-type MetricRecord = {
-  files: number | null;
-  test_ratio: number | null;
-  raw_metrics_json?: {
-    fileStats?: {
-      totalFiles?: number;
-      sourceFiles?: number;
-      testFiles?: number;
-      docsFiles?: number;
-      backendFiles?: number;
-      frontendFiles?: number;
-    };
-    frameworks?: string[];
-    summary?: string;
-  } | null;
-};
-
-type ScoreRecord = {
-  backend_score: number | null;
-  architecture_score: number | null;
-  documentation_score: number | null;
-  confidence_score: number | null;
-  explanation: string | null;
-  score_breakdown_json?: {
-    frontend?: number;
-    codeQuality?: number;
-    security?: number;
-    strengths?: string[];
-    risks?: string[];
-    skillEvidence?: string[];
-  } | null;
-};
-
-type ProjectRecord = {
-  id: string;
-  repo_name: string;
-  repo_url: string;
-  analysis_status: string;
-  default_branch: string | null;
-  created_at: string;
-  last_analyzed_at: string | null;
-  analysis_error: string | null;
-  metrics?: MetricRecord[];
-  scores?: ScoreRecord[];
-  certificates?: Array<{
-    id: string;
-    status: string | null;
-    created_at: string | null;
-    verification_status?: string | null;
-  }>;
-  users?: { email?: string | null } | Array<{ email?: string | null }>;
-};
 
 async function fetchCertificateClient(certificateId: string) {
-  const supabase = createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.access_token) {
-    throw new Error("Please sign in again to load this certificate.");
-  }
-
-  const response = await fetch(buildSkillchainApiUrl("/projects"), {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-    },
+  const response = await fetch(buildSkillchainApiUrl(`/verify/${certificateId}`), {
     cache: "no-store",
   });
 
@@ -84,62 +19,7 @@ async function fetchCertificateClient(certificateId: string) {
     throw new Error(result.message || "Could not load certificate.");
   }
 
-  const projects = (result.data || []) as ProjectRecord[];
-  const project = projects.find((entry) =>
-    (entry.certificates || []).some((certificate) => certificate.id === certificateId)
-  );
-
-  if (!project) {
-    return null;
-  }
-
-  const certificate = (project.certificates || []).find(
-    (entry) => entry.id === certificateId
-  );
-
-  if (!certificate) {
-    return null;
-  }
-
-  const explanation =
-    project.scores?.[0]?.explanation ||
-    project.metrics?.[0]?.raw_metrics_json?.summary ||
-    "This is a demo certificate view backed by the saved project analysis.";
-
-  const fallbackCertificate: CertificateWithProjectRecord = {
-    id: certificate.id,
-    status: certificate.status,
-    created_at: certificate.created_at,
-    verification_status: certificate.verification_status,
-    verification_url: `/verify/${certificate.id}`,
-    certificate_hash: null,
-    blockchain_tx: null,
-    contract_address: null,
-    chain_id: null,
-    certificate_payload: {
-      summary: {
-        explanation,
-      },
-      verificationBasis: {
-        scope: "project",
-        basisVersion: "v1",
-        projectBinding: {
-          projectId: project.id,
-          repoUrl: project.repo_url,
-          repoName: project.repo_name,
-          defaultBranch: project.default_branch,
-        },
-        checks: [
-          "This certificate is tied to one saved project record.",
-          "Its score summary comes from the repository analysis stored for that project.",
-          "This is a demo-safe certificate view until the final certificate pipeline is completed.",
-        ],
-      },
-    },
-    projects: project,
-  };
-
-  return fallbackCertificate;
+  return (result.data || null) as CertificateWithProjectRecord | null;
 }
 
 export default function CertificateDetailClient({
@@ -181,16 +61,21 @@ export default function CertificateDetailClient({
 
   if (isLoading) {
     return (
-      <main className="w-full px-4 pb-12 pt-4 sm:px-6 sm:pb-14 lg:px-8 lg:pb-16">
-        <div className="mb-5">
-          <BackButton href="/dashboard/certificates" text="Back to Certificates" />
+      <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(168,245,233,0.08),transparent_26%),linear-gradient(180deg,#020617,#0f172a_42%,#020617)] px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 rounded-[1.75rem] border border-white/10 bg-black/25 px-4 py-3 backdrop-blur-xl">
+          <BackButton href="/dashboard/certificates" text="Close Viewer" />
+          <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-white/70 sm:inline-flex">
+            <Expand className="h-3.5 w-3.5" />
+            Certificate Viewer
+          </div>
         </div>
-        <section className="rounded-[2.5rem] border border-border/70 bg-surface/50 p-8 shadow-[0_24px_70px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
-          <div className="animate-pulse space-y-4">
+
+        <section className="mx-auto mt-5 max-w-6xl rounded-[2.8rem] border border-white/10 bg-white/5 p-4 shadow-[0_40px_120px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:p-6">
+          <div className="animate-pulse space-y-4 rounded-[2.2rem] bg-white/[0.03] p-6">
             <div className="h-5 w-40 rounded-full bg-white/10" />
             <div className="h-10 w-full max-w-2xl rounded-2xl bg-white/10" />
             <div className="h-5 w-full max-w-xl rounded-full bg-white/8" />
-            <div className="h-[28rem] rounded-[2rem] bg-white/8" />
+            <div className="h-[32rem] rounded-[2rem] bg-white/8" />
           </div>
         </section>
       </main>
@@ -199,12 +84,19 @@ export default function CertificateDetailClient({
 
   if (!certificate) {
     return (
-      <main className="w-full px-4 pb-12 pt-4 sm:px-6 sm:pb-14 lg:px-8 lg:pb-16">
-        <div className="mb-5">
-          <BackButton href="/dashboard/certificates" text="Back to Certificates" />
+      <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(168,245,233,0.08),transparent_26%),linear-gradient(180deg,#020617,#0f172a_42%,#020617)] px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 rounded-[1.75rem] border border-white/10 bg-black/25 px-4 py-3 backdrop-blur-xl">
+          <BackButton href="/dashboard/certificates" text="Close Viewer" />
+          <Link
+            href="/dashboard/certificates"
+            className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+          >
+            <X className="h-4 w-4" />
+            Exit
+          </Link>
         </div>
 
-        <section className="rounded-[2.5rem] border border-red-500/20 bg-red-500/10 p-8 shadow-[0_24px_70px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
+        <section className="mx-auto mt-5 max-w-4xl rounded-[2.5rem] border border-red-500/20 bg-red-500/10 p-8 shadow-[0_24px_70px_rgba(0,0,0,0.25)] backdrop-blur-2xl">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-300">
             Certificate unavailable
           </p>
@@ -226,25 +118,36 @@ export default function CertificateDetailClient({
   }
 
   return (
-    <main className="w-full px-4 pb-12 pt-4 sm:px-6 sm:pb-14 lg:px-8 lg:pb-16">
-      <div className="mb-5">
-        <BackButton href="/dashboard/certificates" text="Back to Certificates" />
-      </div>
+      <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(168,245,233,0.08),transparent_26%),linear-gradient(180deg,#020617,#0f172a_42%,#020617)] px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 rounded-[1.75rem] border border-white/10 bg-black/25 px-4 py-3 backdrop-blur-xl">
+          <BackButton href="/dashboard/certificates" text="Close Viewer" />
+          <div className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.2em] text-white/70">
+            <Expand className="h-3.5 w-3.5" />
+            Full Certificate Preview
+          </div>
+        </div>
 
-      <section className="mb-6 space-y-3">
-        <p className="inline-flex items-center rounded-full border border-accent/20 bg-accent/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.24em] text-accent">
-          Per-Project Credential
-        </p>
-        <h1 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
-          Project Skill Certificate
-        </h1>
-        <p className="max-w-3xl text-sm leading-relaxed text-muted sm:text-base">
-          This is a demo-ready certificate view built from the saved project analysis while the final
-          certificate pipeline is still being stabilized.
-        </p>
-      </section>
+        <section className="mx-auto mt-5 max-w-7xl">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3 px-1">
+            <div>
+              <p className="inline-flex items-center rounded-full border border-accent/20 bg-accent/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-accent">
+                Per-Project Credential
+              </p>
+              <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
+                Project Skill Certificate
+              </h1>
+            </div>
+            <p className="max-w-xl text-right text-sm leading-relaxed text-white/60">
+              Opened in viewer mode so the certificate stays centered like a document preview.
+            </p>
+          </div>
 
-      <SkillCertificateView certificate={certificate} />
-    </main>
+          <div className="rounded-[2.8rem] border border-white/10 bg-white/[0.04] p-3 shadow-[0_40px_120px_rgba(0,0,0,0.45)] backdrop-blur-2xl sm:p-5">
+            <div className="mx-auto max-w-6xl">
+              <SkillCertificateView certificate={certificate} />
+            </div>
+          </div>
+        </section>
+      </main>
   );
 }

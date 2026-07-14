@@ -26,6 +26,38 @@ async function ensureUserProfile(authUser) {
   return payload;
 }
 
+function extractGitHubUsername(authUser) {
+  const candidates = [
+    authUser?.user_metadata?.user_name,
+    authUser?.user_metadata?.preferred_username,
+    authUser?.user_metadata?.username,
+    authUser?.user_metadata?.login,
+    authUser?.app_metadata?.user_name,
+    authUser?.app_metadata?.preferred_username,
+    authUser?.app_metadata?.username,
+  ];
+
+  const identities = Array.isArray(authUser?.identities) ? authUser.identities : [];
+
+  for (const identity of identities) {
+    const provider = identity?.provider || identity?.identity_data?.provider;
+    if (provider !== "github") continue;
+
+    candidates.push(
+      identity?.identity_data?.user_name,
+      identity?.identity_data?.preferred_username,
+      identity?.identity_data?.username,
+      identity?.identity_data?.login
+    );
+  }
+
+  const match = candidates.find(
+    (value) => typeof value === "string" && value.trim().length > 0
+  );
+
+  return match ? match.trim() : null;
+}
+
 async function resolveAuthenticatedUser(request) {
   const authHeader = request.headers.authorization || "";
 
@@ -51,5 +83,6 @@ async function resolveAuthenticatedUser(request) {
 
 module.exports = {
   ensureUserProfile,
+  extractGitHubUsername,
   resolveAuthenticatedUser,
 };

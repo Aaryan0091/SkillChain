@@ -5,8 +5,7 @@ import {
   ShieldCheck, GitCommit, Award, Terminal, 
   Activity, Code, Calendar, Clock, 
   Mail, Fingerprint, LogOut, CheckCircle2,
-  Star, Layers,
-  ChevronRight
+  Star, Layers
 } from "lucide-react";
 
 interface ProfileClientProps {
@@ -35,6 +34,13 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
   };
+
+  const verifiedSkills = [
+    { name: "TypeScript", score: 96, color: "bg-blue-500" },
+    { name: "React / Next.js", score: 92, color: "bg-cyan-400" },
+    { name: "Solidity & Web3", score: 88, color: "bg-purple-500" },
+    { name: "Node.js & Backend", score: 85, color: "bg-emerald-500" }
+  ];
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 pb-8 sm:space-y-8 sm:pb-10">
@@ -228,12 +234,7 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
             </div>
 
             <div className="space-y-6">
-              {[
-                { name: "TypeScript", score: 96, color: "bg-blue-500" },
-                { name: "React / Next.js", score: 92, color: "bg-cyan-400" },
-                { name: "Solidity & Web3", score: 88, color: "bg-purple-500" },
-                { name: "Node.js & Backend", score: 85, color: "bg-emerald-500" }
-              ].map((skill, index) => (
+              {verifiedSkills.map((skill, index) => (
                 <div key={index} className="space-y-3 group">
                   <div className="flex justify-between items-end">
                     <span className="text-sm font-bold text-white group-hover:text-accent transition-colors">{skill.name}</span>
@@ -256,13 +257,6 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
                   </div>
                 </div>
               ))}
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-white/10 flex justify-end items-center">
-              <button className="text-sm font-semibold text-accent hover:text-emerald-400 transition-colors flex items-center gap-1 group">
-                View detailed skill graph
-                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </button>
             </div>
           </motion.div>
 

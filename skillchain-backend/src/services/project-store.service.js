@@ -195,6 +195,84 @@ async function updateCertificateRecord(certificateId, values) {
   }
 }
 
+async function fetchOwnedCertificateById(certificateId, userId) {
+  const supabase = getSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("certificates")
+    .select(
+      `
+      id,
+      project_id,
+      projects!inner (
+        id,
+        user_id
+      )
+    `
+    )
+    .eq("id", certificateId)
+    .eq("projects.user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to load owned certificate: ${error.message}`);
+  }
+
+  return data;
+}
+
+async function deleteCertificateRecord(certificateId) {
+  const supabase = getSupabaseAdminClient();
+  const { error } = await supabase.from("certificates").delete().eq("id", certificateId);
+
+  if (error) {
+    throw new Error(`Failed to delete certificate: ${error.message}`);
+  }
+}
+
+async function deleteProjectRecord(projectId) {
+  const supabase = getSupabaseAdminClient();
+
+  const { error: jobsError } = await supabase
+    .from("analysis_jobs")
+    .delete()
+    .eq("project_id", projectId);
+  if (jobsError) {
+    throw new Error(`Failed to delete analysis jobs: ${jobsError.message}`);
+  }
+
+  const { error: metricsError } = await supabase
+    .from("metrics")
+    .delete()
+    .eq("project_id", projectId);
+  if (metricsError) {
+    throw new Error(`Failed to delete metrics: ${metricsError.message}`);
+  }
+
+  const { error: scoresError } = await supabase
+    .from("scores")
+    .delete()
+    .eq("project_id", projectId);
+  if (scoresError) {
+    throw new Error(`Failed to delete scores: ${scoresError.message}`);
+  }
+
+  const { error: certificatesError } = await supabase
+    .from("certificates")
+    .delete()
+    .eq("project_id", projectId);
+  if (certificatesError) {
+    throw new Error(`Failed to delete certificates: ${certificatesError.message}`);
+  }
+
+  const { error: projectError } = await supabase
+    .from("projects")
+    .delete()
+    .eq("id", projectId);
+  if (projectError) {
+    throw new Error(`Failed to delete project: ${projectError.message}`);
+  }
+}
+
 async function replaceProjectArtifacts({ projectId, userId, analysis, frontendUrl }) {
   const supabase = getSupabaseAdminClient();
 
@@ -481,13 +559,16 @@ async function finalizeCertificateVerification(certificateId) {
 module.exports = {
   createAnalysisJob,
   createProjectRecord,
+  deleteCertificateRecord,
   fetchProjectById,
   fetchProjectsForUser,
+  fetchOwnedCertificateById,
   fetchPublicCertificateById,
   fetchPublicCertificates,
   finalizeCertificateVerification,
   markAnalysisJob,
   replaceProjectArtifacts,
+  deleteProjectRecord,
   updateCertificateRecord,
   updateProjectRecord,
 };

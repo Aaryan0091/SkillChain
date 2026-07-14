@@ -4,7 +4,8 @@ import { motion } from "framer-motion";
 import { 
   Link as LinkIcon, Cpu, Zap, 
   ShieldCheck, Terminal, Code,
-  Layers, Lock, Sparkles, Database, GitBranch, Search, Activity
+  Layers, Lock, Sparkles, Database, GitBranch, Search, Activity,
+  BadgeCheck, Eye, ArrowRight
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { getPublicEnv } from "@/lib/env";
@@ -53,9 +54,12 @@ type AnalysisResult = {
   summary: string;
 };
 
+type SubmitMode = "profile" | "public";
+
 export default function SubmitClient() {
   const [url, setUrl] = useState("");
   const [branch, setBranch] = useState("");
+  const [submitMode, setSubmitMode] = useState<SubmitMode>("profile");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
@@ -91,33 +95,45 @@ export default function SubmitClient() {
     setStatusMessage("Connecting to the analyzer...");
 
     try {
-      const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!session?.access_token) {
-        throw new Error("Please sign in before starting a repository analysis.");
-      }
-
       const { apiBaseUrl } = getPublicEnv();
       const baseUrl = apiBaseUrl.replace(/\/$/, "");
-      const projectsUrl = baseUrl.endsWith("/api/v1")
-        ? `${baseUrl}/projects`
-        : `${baseUrl}/api/v1/projects`;
+      const apiRoot = baseUrl.endsWith("/api/v1")
+        ? baseUrl
+        : `${baseUrl}/api/v1`;
+      const projectsUrl =
+        submitMode === "profile" ? `${apiRoot}/projects` : `${apiRoot}/projects/preview`;
+      let accessToken: string | null = null;
+
+      if (submitMode === "profile") {
+        const supabase = createClient();
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        if (!session?.access_token) {
+          throw new Error("Please sign in before adding a repository to your profile.");
+        }
+
+        accessToken = session.access_token;
+      }
 
       console.info("[SkillChain] Starting repository analysis", {
         repoUrl: url,
         branch: branch || "default",
         endpoint: projectsUrl,
+        submitMode,
       });
-      setStatusMessage("Fetching GitHub metadata and repository files...");
+      setStatusMessage(
+        submitMode === "profile"
+          ? "Fetching GitHub metadata and saving this repo to your profile..."
+          : "Fetching GitHub metadata for a public-only analysis..."
+      );
 
       const response = await fetch(projectsUrl, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${session.access_token}`,
           "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify({
           repoUrl: url,
@@ -125,7 +141,11 @@ export default function SubmitClient() {
         }),
       });
 
-      setStatusMessage("Scoring repository evidence...");
+      setStatusMessage(
+        submitMode === "profile"
+          ? "Scoring repository evidence and updating your saved record..."
+          : "Scoring repository evidence without saving to a profile..."
+      );
       const result = await response.json();
 
       if (!response.ok || !result.success) {
@@ -133,7 +153,11 @@ export default function SubmitClient() {
       }
 
       setAnalysis(result.data.analysis);
-      setStatusMessage("Analysis complete.");
+      setStatusMessage(
+        submitMode === "profile"
+          ? "Analysis complete and saved to your profile."
+          : "Analysis complete. This repo was not saved to any profile."
+      );
       console.info("[SkillChain] Repository analysis complete", result.data.analysis);
     } catch (caughtError) {
       console.error("[SkillChain] Repository analysis failed", caughtError);
@@ -184,8 +208,89 @@ export default function SubmitClient() {
               
               <h2 className="text-2xl font-bold text-white mb-2">Link Repository</h2>
               <p className="text-sm text-muted-foreground mb-8">
-                Paste your public GitHub repository URL below to initiate the code analysis pipeline.
+                Choose whether to save the repository to your own profile or only analyze it as a public reference.
               </p>
+
+              <div className="mb-5 rounded-[1.35rem] border border-white/10 bg-background/35 p-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setSubmitMode("profile")}
+                    className={`group relative cursor-pointer overflow-hidden rounded-[1rem] border px-3 py-2.5 text-left transition-all duration-300 ${
+                      submitMode === "profile"
+                        ? "border border-[#a8f5e9]/40 bg-[#a8f5e9]/10 text-white"
+                        : "border border-transparent bg-white/5 text-muted-foreground hover:bg-white/10"
+                    }`}
+                  >
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(168,245,233,0.18),transparent_35%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#a8f5e9]/25 bg-[#a8f5e9]/10 text-[#a8f5e9]">
+                          <BadgeCheck className="h-4 w-4" />
+                        </div>
+                        <span
+                          className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em] ${
+                            submitMode === "profile"
+                              ? "bg-[#a8f5e9]/15 text-[#a8f5e9]"
+                              : "bg-white/8 text-muted-foreground"
+                          }`}
+                        >
+                          {submitMode === "profile" ? "Selected" : "Primary"}
+                        </span>
+                      </div>
+                      <p className="mt-2.5 text-[13px] font-semibold text-white">Add to my profile</p>
+                      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                        Save analysis and certificate to your account.
+                      </p>
+                      <p className="mt-1 text-[10px] leading-relaxed text-[#a8f5e9]">
+                        Must match your GitHub owner.
+                      </p>
+                      <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a8f5e9]">
+                        Claimed mode
+                        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                      </div>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubmitMode("public")}
+                    className={`group relative cursor-pointer overflow-hidden rounded-[1rem] border px-3 py-2.5 text-left transition-all duration-300 ${
+                      submitMode === "public"
+                        ? "border border-[#a8f5e9]/40 bg-[#a8f5e9]/10 text-white"
+                        : "border border-transparent bg-white/5 text-muted-foreground hover:bg-white/10"
+                    }`}
+                  >
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(125,211,252,0.18),transparent_35%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    <div className="relative z-10">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-sky-300/20 bg-sky-300/10 text-sky-200">
+                          <Eye className="h-4 w-4" />
+                        </div>
+                        <span
+                          className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em] ${
+                            submitMode === "public"
+                              ? "bg-sky-300/15 text-sky-200"
+                              : "bg-white/8 text-muted-foreground"
+                          }`}
+                        >
+                          {submitMode === "public" ? "Selected" : "Read only"}
+                        </span>
+                      </div>
+                      <p className="mt-2.5 text-[13px] font-semibold text-white">Analyze public repo</p>
+                      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                        Run analysis without saving to your account.
+                      </p>
+                      <p className="mt-1 text-[10px] leading-relaxed text-sky-200">
+                        Works for any public repo.
+                      </p>
+                      <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-200">
+                        Public mode
+                        <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
               
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
@@ -243,7 +348,9 @@ export default function SubmitClient() {
                       ) : (
                         <>
                           <Zap className="h-5 w-5" />
-                          Initiate Analysis
+                          {submitMode === "profile"
+                            ? "Analyze and Save to Profile"
+                            : "Analyze Without Saving"}
                         </>
                       )}
                     </span>
@@ -253,7 +360,11 @@ export default function SubmitClient() {
 
               <div className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
                 <Lock className="h-3.5 w-3.5" />
-                <span>Read-only access. We never store your raw code.</span>
+                <span>
+                  {submitMode === "profile"
+                    ? "Read-only access. We store the analysis record, not your raw code."
+                    : "Read-only access. Public-only analysis is not added to your profile."}
+                </span>
               </div>
 
               {statusMessage ? (

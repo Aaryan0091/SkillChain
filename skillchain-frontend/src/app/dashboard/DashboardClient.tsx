@@ -12,6 +12,7 @@ import {
   GitBranch,
   Layers3,
   Radar,
+  Trash2,
   ScanSearch,
   ShieldCheck,
   Sparkles,
@@ -208,10 +209,36 @@ async function fetchProjectsClient() {
   return (result.data || []) as ProjectRecord[];
 }
 
+async function deleteProjectClient(projectId: string) {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error("Please sign in again to remove this project.");
+  }
+
+  const response = await fetch(buildSkillchainApiUrl(`/projects/${projectId}`), {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Could not remove project.");
+  }
+}
+
 export default function DashboardClient() {
   const [projects, setProjects] = useState<ProjectRecord[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [removingProjectId, setRemovingProjectId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -331,6 +358,33 @@ export default function DashboardClient() {
         formatRelativeDate(project.last_analyzed_at || project.created_at),
     };
   });
+
+  async function removeProject(projectId: string) {
+    const confirmed =
+      typeof window === "undefined"
+        ? true
+        : window.confirm("Remove this saved repository from your dashboard?");
+
+    if (!confirmed) return;
+
+    setRemovingProjectId(projectId);
+    setActionError(null);
+
+    try {
+      await deleteProjectClient(projectId);
+      startTransition(() => {
+        setProjects((currentProjects) =>
+          currentProjects.filter((project) => project.id !== projectId)
+        );
+        setRemovingProjectId(null);
+      });
+    } catch (error) {
+      setRemovingProjectId(null);
+      setActionError(
+        error instanceof Error ? error.message : "Could not remove project."
+      );
+    }
+  }
 
   const queue = focusProject?.analysis_jobs?.length
     ? focusProject.analysis_jobs.map((job) => ({
@@ -524,6 +578,12 @@ export default function DashboardClient() {
               </Link>
             </div>
 
+            {actionError ? (
+              <div className="border-t border-border/50 px-6 py-4 text-sm text-red-300">
+                {actionError}
+              </div>
+            ) : null}
+
             <div className="divide-y divide-border/50">
               {liveProjects.length ? (
                 liveProjects.map((project) => (
@@ -542,6 +602,15 @@ export default function DashboardClient() {
                         <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[11px] font-medium text-muted">
                           {project.branch}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => removeProject(project.id)}
+                          disabled={removingProjectId === project.id}
+                          className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-red-400/20 bg-red-400/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-200 transition-colors hover:bg-red-400/15 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          {removingProjectId === project.id ? "Removing..." : "Remove"}
+                        </button>
                       </div>
                       <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
                         {project.summary}
