@@ -10,6 +10,7 @@ import {
   User,
 } from "lucide-react";
 import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
+import { resolveCertificateVerification } from "@/lib/certificate-verification";
 
 type MetricRecord = {
   files: number | null;
@@ -206,10 +207,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
   const strengths = score?.score_breakdown_json?.strengths?.slice(0, 3) || [];
   const evidence = score?.score_breakdown_json?.skillEvidence?.slice(0, 3) || [];
   const frameworks = metric?.raw_metrics_json?.frameworks?.slice(0, 4) || [];
-  const isVerified =
-    certificate.verification_status === "verified" ||
-    certificate.status === "verified";
-
+  const verification = resolveCertificateVerification(certificate, project);
   const stats = [
     {
       label: "Profile score",
@@ -252,8 +250,11 @@ export default async function PublicProfilePage({ params }: PageProps) {
                   <p className="text-sm font-bold uppercase tracking-[0.2em] text-accent">
                     Public Profile Summary
                   </p>
-                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${isVerified ? "border-accent/30 bg-accent/15 text-accent" : "border-[#a8f5e9]/30 bg-[#a8f5e9]/10 text-[#a8f5e9]"}`}>
-                    {isVerified ? "Blockchain Verified" : "Certificate Issued"}
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-semibold text-muted">
+                    Summary View Only
+                  </span>
+                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${verification.badgeClass}`}>
+                    {verification.badgeLabel}
                   </span>
                 </div>
                 <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl lg:text-5xl">
@@ -261,7 +262,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
                 </h1>
                 <p className="mt-2 text-sm text-muted">@{handle}</p>
                 <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted">
-                  A recruiter-friendly summary built from the public certificate record for one analyzed project.
+                  A recruiter-friendly summary built from one saved project certificate. This page helps with quick reading, but the primary proof still lives on the certificate verification record.
                 </p>
               </div>
             </div>
@@ -306,7 +307,7 @@ export default async function PublicProfilePage({ params }: PageProps) {
               <div className="rounded-[1.4rem] border border-white/8 bg-background/40 p-4">
                 <p className="text-xs uppercase tracking-[0.18em] text-muted">Certificate issued</p>
                 <p className="mt-2 text-lg font-semibold text-white">{formatDate(certificate.created_at)}</p>
-                <p className="mt-2 text-sm text-muted">Status: {titleCase(certificate.verification_status || certificate.status || "pending")}</p>
+                <p className="mt-2 text-sm text-muted">Status: {verification.headline}</p>
               </div>
             </div>
             <p className="mt-5 text-sm leading-relaxed text-muted">
@@ -359,21 +360,39 @@ export default async function PublicProfilePage({ params }: PageProps) {
           <section className="rounded-[2rem] border border-border/70 bg-surface/40 p-6 shadow-sm backdrop-blur-xl">
             <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-white">
               <Activity className="h-5 w-5 text-accent" />
-              Quick Read
+              Recruiter Read
             </h2>
             <div className="mt-5 space-y-4 text-sm leading-relaxed text-muted">
-              <p>This profile summary is public-safe and built from the linked project certificate.</p>
-              <p>It helps recruiters understand the person behind the repo without opening internal dashboard data.</p>
-              <p>For full technical proof, open the certificate verification page.</p>
+              <p>{verification.recruiterSummary}</p>
+              <p>This summary is public-safe and built from one linked project certificate, not from private dashboard data.</p>
+              <p>For the full trust trail, open the certificate verification page and inspect the proof checklist.</p>
             </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-border/70 bg-surface/40 p-6 shadow-sm backdrop-blur-xl">
+            <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-white">
+              <CheckCircle2 className="h-5 w-5 text-accent" />
+              Verification Rules
+            </h2>
+            <ul className="mt-5 space-y-3">
+              {verification.checks.map((item) => (
+                <li
+                  key={item.label}
+                  className="rounded-[1.2rem] border border-white/8 bg-background/40 px-4 py-3 text-sm leading-relaxed text-muted"
+                >
+                  <span className="font-semibold text-white">{item.label}:</span>{" "}
+                  {item.passed ? "Passed." : "Pending or failed."} {item.detail}
+                </li>
+              ))}
+            </ul>
           </section>
 
           <div className="flex flex-wrap gap-3">
             <Link
               href={`/verify/${id}`}
-              className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
+              className="rounded-full bg-accent px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-accent/90 cursor-pointer"
             >
-              Open Certificate Record
+              Open Primary Proof Record
             </Link>
             {project?.repo_url ? (
               <a

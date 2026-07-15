@@ -4,6 +4,31 @@ import { useRef, useEffect, useCallback } from 'react';
 import gsap from 'gsap';
 import './BlobCursor.css';
 
+type BlobCursorProps = {
+  blobType?: 'circle' | 'square';
+  fillColors?: string[];
+  trailCount?: number;
+  sizes?: number[];
+  innerSizes?: number[];
+  innerColor?: string;
+  opacities?: number[];
+  shadowColor?: string;
+  shadowBlur?: number;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  filterId?: string;
+  filterStdDeviation?: number;
+  filterColorMatrixValues?: string;
+  useFilter?: boolean;
+  fastDuration?: number;
+  slowDuration?: number;
+  fastEase?: string;
+  slowEase?: string;
+  zIndex?: number;
+};
+
+type PointerLikeEvent = MouseEvent | TouchEvent;
+
 export default function BlobCursor({
   blobType = 'circle',
   fillColors = ['#0f766e', '#d97706', '#34d399'],
@@ -25,9 +50,9 @@ export default function BlobCursor({
   fastEase = 'power3.out',
   slowEase = 'power1.out',
   zIndex = 100
-}: any) {
+}: BlobCursorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const blobsRef = useRef<any[]>([]);
+  const blobsRef = useRef<Array<HTMLDivElement | null>>([]);
 
   const updateOffset = useCallback(() => {
     if (!containerRef.current) return { left: 0, top: 0 };
@@ -36,7 +61,7 @@ export default function BlobCursor({
   }, []);
 
   const handleMove = useCallback(
-    (e: any) => {
+    (e: PointerLikeEvent) => {
       const { left, top } = updateOffset();
       const x = 'clientX' in e ? e.clientX : e.touches?.[0]?.clientX || 0;
       const y = 'clientY' in e ? e.clientY : e.touches?.[0]?.clientY || 0;

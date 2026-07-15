@@ -27,6 +27,10 @@ async function ensureUserProfile(authUser) {
 }
 
 function extractGitHubUsername(authUser) {
+  return extractGitHubIdentity(authUser).username;
+}
+
+function extractGitHubIdentity(authUser) {
   const candidates = [
     authUser?.user_metadata?.user_name,
     authUser?.user_metadata?.preferred_username,
@@ -55,7 +59,29 @@ function extractGitHubUsername(authUser) {
     (value) => typeof value === "string" && value.trim().length > 0
   );
 
-  return match ? match.trim() : null;
+  const idCandidates = [
+    authUser?.user_metadata?.provider_id,
+    authUser?.user_metadata?.id,
+    authUser?.app_metadata?.provider_id,
+    authUser?.app_metadata?.id,
+  ];
+
+  for (const identity of identities) {
+    const provider = identity?.provider || identity?.identity_data?.provider;
+    if (provider !== "github") continue;
+
+    idCandidates.push(identity?.id, identity?.identity_data?.id, identity?.identity_id);
+  }
+
+  const githubUserId = idCandidates.find((value) => {
+    const normalized = String(value || "").trim();
+    return normalized.length > 0 && /^\d+$/.test(normalized);
+  });
+
+  return {
+    username: match ? match.trim() : null,
+    githubUserId: githubUserId ? String(githubUserId).trim() : null,
+  };
 }
 
 async function resolveAuthenticatedUser(request) {
@@ -83,6 +109,7 @@ async function resolveAuthenticatedUser(request) {
 
 module.exports = {
   ensureUserProfile,
+  extractGitHubIdentity,
   extractGitHubUsername,
   resolveAuthenticatedUser,
 };

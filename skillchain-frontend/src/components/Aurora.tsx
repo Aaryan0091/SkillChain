@@ -3,6 +3,24 @@ import { useEffect, useRef } from 'react';
 
 import './Aurora.css';
 
+type AuroraProps = {
+  amplitude?: number;
+  blend?: number;
+  colorStops?: string[];
+  speed?: number;
+  time?: number;
+};
+
+type ProgramLike = {
+  uniforms: {
+    uResolution: { value: [number, number] };
+    uTime: { value: number };
+    uAmplitude: { value: number };
+    uBlend: { value: number };
+    uColorStops: { value: number[][] };
+  };
+};
+
 const VERT = `#version 300 es
 in vec2 position;
 void main() {
@@ -109,7 +127,7 @@ void main() {
 }
 `;
 
-export default function Aurora(props: any) {
+export default function Aurora(props: AuroraProps) {
   const { colorStops = ['#5227FF', '#7cff67', '#5227FF'], amplitude = 1.0, blend = 0.5 } = props;
   const propsRef = useRef(props);
   propsRef.current = props;
@@ -129,10 +147,10 @@ export default function Aurora(props: any) {
     gl.clearColor(0, 0, 0, 0);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    // @ts-ignore
+    // @ts-expect-error OGL exposes canvas on the renderer context at runtime.
     gl.canvas.style.backgroundColor = 'transparent';
 
-    let program: any;
+    let program: ProgramLike | null = null;
 
     function resize() {
       if (!ctn) return;
@@ -147,7 +165,7 @@ export default function Aurora(props: any) {
 
     const geometry = new Triangle(gl);
     if (geometry.attributes.uv) {
-      // @ts-ignore
+      // @ts-expect-error The generated triangle geometry may expose uv which we intentionally drop.
       delete geometry.attributes.uv;
     }
 
@@ -156,7 +174,7 @@ export default function Aurora(props: any) {
       return [c.r, c.g, c.b];
     });
 
-    program = new Program(gl, {
+    const oglProgram = new Program(gl, {
       vertex: VERT,
       fragment: FRAG,
       uniforms: {
@@ -167,8 +185,9 @@ export default function Aurora(props: any) {
         uBlend: { value: blend }
       }
     });
+    program = oglProgram as ProgramLike;
 
-    const mesh = new Mesh(gl, { geometry, program });
+    const mesh = new Mesh(gl, { geometry, program: oglProgram });
     ctn.appendChild(gl.canvas);
 
     let animateId = 0;

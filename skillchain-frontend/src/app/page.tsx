@@ -128,7 +128,7 @@ export default function Home() {
             <a href="#how-it-works" className="px-4 py-1.5 rounded-full text-sm font-medium text-muted hover:text-white hover:bg-white/10 transition-all">
               How it Works
             </a>
-            <Link href="/verify" className="px-4 py-1.5 rounded-full text-sm font-medium text-muted hover:text-white hover:bg-white/10 transition-all">
+            <Link href="/dashboard/verify" className="px-4 py-1.5 rounded-full text-sm font-medium text-muted hover:text-white hover:bg-white/10 transition-all">
               Verify ID
             </Link>
             <Link href="/dashboard" className="px-4 py-1.5 rounded-full text-sm font-medium text-accent hover:text-accent hover:bg-accent/20 transition-all">
@@ -191,7 +191,7 @@ export default function Home() {
                 See how it works
               </a>
               <Link
-                href="/verify"
+                href="/dashboard/verify"
                 className="flex h-12 items-center justify-center rounded-full border-2 border-accent/30 bg-accent/10 px-6 text-sm font-semibold text-accent backdrop-blur-sm transition-colors hover:bg-accent/15 sm:h-14 sm:px-8 sm:text-base"
               >
                 Verify Certificate ID

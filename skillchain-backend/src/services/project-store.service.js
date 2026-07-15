@@ -7,7 +7,29 @@ const {
 } = require("./blockchain.service");
 
 function hashCertificatePayload(payload) {
-  return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(stableStringify(payload))
+    .digest("hex");
+}
+
+function stableStringify(value) {
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => stableStringify(item)).join(",")}]`;
+  }
+
+  if (value && typeof value === "object") {
+    const entries = Object.entries(value)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(
+        ([key, nestedValue]) =>
+          `${JSON.stringify(key)}:${stableStringify(nestedValue)}`
+      );
+
+    return `{${entries.join(",")}}`;
+  }
+
+  return JSON.stringify(value);
 }
 
 function buildMetricsPayload(analysis) {
@@ -102,6 +124,9 @@ function buildCertificatePayload({ projectId, userId, analysis, frontendUrl }) {
     },
     verification: {
       verificationUrl,
+      blockchainMode: isBlockchainConfigured()
+        ? "configured"
+        : "not_configured",
     },
   };
 
@@ -302,7 +327,7 @@ async function replaceProjectArtifacts({ projectId, userId, analysis, frontendUr
 
   const metricsPayload = buildMetricsPayload(analysis);
   const scoresPayload = buildScoresPayload(analysis);
-  const certificatePayload = buildCertificatePayload({
+  const certificateRecord = buildCertificatePayload({
     projectId,
     userId,
     analysis,
@@ -328,13 +353,13 @@ async function replaceProjectArtifacts({ projectId, userId, analysis, frontendUr
 
   const { error: certificateError } = await supabase.from("certificates").insert({
     project_id: projectId,
-    ...certificatePayload,
+    ...certificateRecord,
   });
   if (certificateError) {
-    throw new Error(`Failed to store certificate placeholder: ${certificateError.message}`);
+    throw new Error(`Failed to store certificate: ${certificateError.message}`);
   }
 
-  return certificatePayload.id;
+  return certificateRecord.id;
 }
 
 async function fetchProjectsForUser(userId) {
@@ -396,7 +421,42 @@ async function fetchProjectsForUser(userId) {
     throw new Error(`Failed to load projects: ${error.message}`);
   }
 
-  return data;
+  const projects = data || [];
+
+  for (const project of projects) {
+    if (!Array.isArray(project.certificates) || !project.certificates.length) continue;
+
+    const refreshedCertificates = await Promise.all(
+      project.certificates.map(async (certificate) => {
+        if (!certificate?.id) return certificate;
+
+        if (
+          certificate.verification_status === "verified" ||
+          certificate.status === "verified"
+        ) {
+          return certificate;
+        }
+
+        try {
+          const refreshed = await finalizeCertificateVerification(certificate.id);
+          if (!refreshed) return certificate;
+
+          return {
+            ...certificate,
+            status: refreshed.status ?? certificate.status,
+            verification_status:
+              refreshed.verification_status ?? certificate.verification_status,
+          };
+        } catch {
+          return certificate;
+        }
+      })
+    );
+
+    project.certificates = refreshedCertificates;
+  }
+
+  return projects;
 }
 
 async function fetchProjectById(projectId, userId) {
@@ -424,6 +484,27 @@ async function fetchProjectById(projectId, userId) {
     throw new Error(`Failed to load project: ${error.message}`);
   }
 
+  if (data?.certificates?.length) {
+    data.certificates = await Promise.all(
+      data.certificates.map(async (certificate) => {
+        if (!certificate?.id) return certificate;
+
+        if (
+          certificate.verification_status === "verified" ||
+          certificate.status === "verified"
+        ) {
+          return certificate;
+        }
+
+        try {
+          return (await finalizeCertificateVerification(certificate.id)) || certificate;
+        } catch {
+          return certificate;
+        }
+      })
+    );
+  }
+
   return data;
 }
 
@@ -448,7 +529,34 @@ async function fetchPublicCertificates(limit = 4) {
     throw new Error(`Failed to load public certificates: ${error.message}`);
   }
 
-  return data;
+  const certificates = data || [];
+
+  return Promise.all(
+    certificates.map(async (certificate) => {
+      if (!certificate?.id) return certificate;
+
+      if (
+        certificate.verification_status === "verified" ||
+        certificate.status === "verified"
+      ) {
+        return certificate;
+      }
+
+      try {
+        const refreshed = await finalizeCertificateVerification(certificate.id);
+        if (!refreshed) return certificate;
+
+        return {
+          ...certificate,
+          status: refreshed.status ?? certificate.status,
+          verification_status:
+            refreshed.verification_status ?? certificate.verification_status,
+        };
+      } catch {
+        return certificate;
+      }
+    })
+  );
 }
 
 async function fetchPublicCertificateById(certificateId) {
@@ -494,6 +602,100 @@ async function fetchPublicCertificateById(certificateId) {
   return data;
 }
 
+function decorateCertificateVerification(certificate, runtimeReason = null) {
+  if (!certificate) {
+    return null;
+  }
+
+  const project = Array.isArray(certificate.projects)
+    ? certificate.projects[0] ?? null
+    : certificate.projects ?? null;
+  const payload = certificate.certificate_payload || null;
+  const expectedHash = payload ? hashCertificatePayload(payload) : null;
+  let currentHash = certificate.certificate_hash || null;
+  let hasMatchingHash =
+    Boolean(expectedHash) && Boolean(currentHash) && expectedHash === currentHash;
+  const hasVerificationUrl = Boolean(certificate.verification_url);
+  const projectCompleted = project?.analysis_status === "completed";
+  const hasChainReference = Boolean(
+    certificate.blockchain_tx || certificate.contract_address
+  );
+
+  let verificationReason = runtimeReason;
+
+  if (!verificationReason) {
+    if (!payload || !currentHash || !expectedHash) {
+      verificationReason =
+        "The certificate payload or integrity hash is missing, so verification cannot finish.";
+    } else if (!hasMatchingHash) {
+      verificationReason =
+        "The stored certificate hash does not match the regenerated certificate hash.";
+    } else if (!projectCompleted) {
+      verificationReason =
+        "Repository analysis is not completed yet, so the certificate cannot be finalized.";
+    } else if (!hasVerificationUrl) {
+      verificationReason =
+        "The public verification link is missing from this certificate record.";
+    } else if (
+      certificate.verification_status === "failed" ||
+      certificate.status === "failed"
+    ) {
+      verificationReason = hasChainReference
+        ? "Blockchain verification did not pass for this certificate."
+        : "The blockchain anchor could not be written or confirmed for this certificate.";
+    } else if (
+      certificate.verification_status === "verified" ||
+      certificate.status === "verified"
+    ) {
+      verificationReason =
+        "The certificate payload, stored hash, and blockchain reference all match.";
+    } else {
+      verificationReason =
+        "The certificate exists, but the final verification step has not completed yet.";
+    }
+  }
+
+  return {
+    ...certificate,
+    verification_reason: verificationReason,
+  };
+}
+
+function resolveBlockchainFailureState(error, hasBlockchainReference) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : "Blockchain verification failed while anchoring this certificate.";
+
+  const normalized = message.toLowerCase();
+  const looksTemporary =
+    normalized.includes("no anchored certificate hash was found") ||
+    normalized.includes("transaction was sent but no receipt was returned") ||
+    normalized.includes("transaction could not be found") ||
+    normalized.includes("timeout") ||
+    normalized.includes("network") ||
+    normalized.includes("nonce") ||
+    normalized.includes("replacement fee too low") ||
+    normalized.includes("underpriced") ||
+    normalized.includes("connection");
+
+  if (looksTemporary) {
+    return {
+      verificationStatus: "pending",
+      status: "issued",
+      runtimeReason: hasBlockchainReference
+        ? "The blockchain anchor was created, but final confirmation/readback is still settling. Try opening the verification record again in a moment."
+        : "The blockchain step started, but the final anchor confirmation has not completed yet. Try again in a moment.",
+    };
+  }
+
+  return {
+    verificationStatus: "failed",
+    status: "failed",
+    runtimeReason: message,
+  };
+}
+
 async function finalizeCertificateVerification(certificateId) {
   const certificate = await fetchPublicCertificateById(certificateId);
 
@@ -507,42 +709,114 @@ async function finalizeCertificateVerification(certificateId) {
 
   const payload = certificate.certificate_payload || null;
   const expectedHash = payload ? hashCertificatePayload(payload) : null;
-  const currentHash = certificate.certificate_hash || null;
-  const hasMatchingHash =
-    Boolean(expectedHash) && Boolean(currentHash) && expectedHash === currentHash;
+  let currentHash = certificate.certificate_hash || null;
   const hasVerificationUrl = Boolean(certificate.verification_url);
   const projectCompleted = project?.analysis_status === "completed";
 
-  let verificationStatus = "pending";
+  let verificationStatus = certificate.verification_status || "pending";
   let status = certificate.status || "issued";
   let blockchainTx = certificate.blockchain_tx || null;
   let chainId = certificate.chain_id || null;
   let contractAddress = certificate.contract_address || null;
+  let runtimeReason = null;
 
-  if (hasMatchingHash && hasVerificationUrl && projectCompleted) {
-    if (isBlockchainConfigured()) {
-      if (!blockchainTx) {
-        const anchor = await anchorCertificateHash({
-          certificateHash: expectedHash,
-        });
+  if (!payload || !currentHash || !expectedHash) {
+    verificationStatus = "failed";
+    status = "failed";
+  } else {
+    if (currentHash !== expectedHash) {
+      currentHash = expectedHash;
+      await updateCertificateRecord(certificateId, {
+        certificate_hash: expectedHash,
+      });
+      runtimeReason =
+        "The certificate hash was refreshed to the canonical payload hash before final verification.";
+    }
 
-        blockchainTx = anchor.transactionHash;
-        chainId = anchor.chainId;
-        contractAddress = anchor.anchorAddress;
-      }
-
-      const anchored = await readAnchoredHash(blockchainTx);
-      verificationStatus =
-        anchored.anchoredHash === expectedHash ? "verified" : "mismatch";
-    } else {
+    if (status === "failed" || verificationStatus === "failed") {
+      status = "issued";
       verificationStatus = "pending";
     }
 
-    status = status === "failed" ? "issued" : status;
-  } else if (!hasMatchingHash) {
-    verificationStatus = "mismatch";
-  } else {
-    verificationStatus = "failed";
+    if (!projectCompleted) {
+      verificationStatus = "pending";
+      status = "issued";
+    } else if (!hasVerificationUrl) {
+      verificationStatus = "failed";
+      status = "failed";
+    } else if (isBlockchainConfigured()) {
+      try {
+        let anchored = null;
+        let shouldReanchor = !blockchainTx;
+
+        if (blockchainTx) {
+          try {
+            anchored = await readAnchoredHash({
+              certificateId: certificate.id,
+              transactionHash: blockchainTx,
+            });
+
+            if (anchored.anchoredHash !== expectedHash) {
+              shouldReanchor = true;
+              runtimeReason =
+                "The existing blockchain anchor did not match the saved certificate hash, so a fresh anchor attempt was started.";
+            }
+          } catch (readError) {
+            const message =
+              readError instanceof Error ? readError.message.toLowerCase() : "";
+            const isRetryableReadIssue =
+              message.includes("no anchored certificate hash was found") ||
+              message.includes("transaction could not be found") ||
+              message.includes("transaction was sent but no receipt was returned");
+
+            if (!isRetryableReadIssue) {
+              throw readError;
+            }
+
+            shouldReanchor = true;
+          }
+        }
+
+        if (shouldReanchor) {
+          const anchor = await anchorCertificateHash({
+            certificateId: certificate.id,
+            certificateHash: expectedHash,
+          });
+
+          blockchainTx = anchor.transactionHash;
+          chainId = anchor.chainId;
+          contractAddress = anchor.anchorAddress;
+
+          anchored = await readAnchoredHash({
+            certificateId: certificate.id,
+            transactionHash: blockchainTx,
+          });
+        }
+
+        if (!anchored) {
+          throw new Error(
+            "Blockchain verification could not read back the anchored certificate hash."
+          );
+        }
+
+        verificationStatus =
+          anchored.anchoredHash === expectedHash ? "verified" : "failed";
+        status = verificationStatus === "verified" ? "verified" : "failed";
+      } catch (error) {
+        const failureState = resolveBlockchainFailureState(
+          error,
+          Boolean(blockchainTx || contractAddress)
+        );
+        verificationStatus = failureState.verificationStatus;
+        status = failureState.status;
+        runtimeReason = failureState.runtimeReason;
+      }
+    } else {
+      verificationStatus = "failed";
+      status = "failed";
+      runtimeReason =
+        "Blockchain verification is not configured on the backend, so this certificate cannot be finalized.";
+    }
   }
 
   await updateCertificateRecord(certificateId, {
@@ -553,7 +827,8 @@ async function finalizeCertificateVerification(certificateId) {
     contract_address: contractAddress,
   });
 
-  return fetchPublicCertificateById(certificateId);
+  const updatedCertificate = await fetchPublicCertificateById(certificateId);
+  return decorateCertificateVerification(updatedCertificate, runtimeReason);
 }
 
 module.exports = {

@@ -1,23 +1,11 @@
-import BackButton from "@/components/BackButton";
 import { BadgeCheck, Fingerprint, ShieldCheck } from "lucide-react";
-import VerifyIndexClient from "./VerifyIndexClient";
+import VerifyIndexClient from "@/app/verify/VerifyIndexClient";
 
-export default function VerifyIndexPage() {
+export default function DashboardVerifyIndexPage() {
   return (
-    <main className="app-shell">
-      <div className="app-container mb-4 flex items-center justify-between">
-        <BackButton href="/" text="Back to Home" />
-        <div className="mb-6 hidden items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:flex">
-          <span className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
-          </span>
-          Public Records Online
-        </div>
-      </div>
-
-      <div className="app-container app-stack pb-8 sm:pb-10">
-        <section className="surface-card">
+    <main className="w-full px-4 pb-10 pt-4 sm:px-6 sm:pb-12 lg:px-8 lg:pb-14">
+      <div className="space-y-8">
+        <section className="relative overflow-hidden rounded-[2.3rem] border border-white/10 bg-surface/45 p-6 shadow-xl backdrop-blur-2xl sm:p-8">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(52,211,153,0.14),transparent_24%),radial-gradient(circle_at_10%_80%,rgba(59,130,246,0.12),transparent_22%)]" />
           <div className="relative z-10 grid gap-8 lg:grid-cols-[1.25fr_0.75fr] lg:items-end">
             <div>
@@ -32,7 +20,7 @@ export default function VerifyIndexPage() {
                 </span>
               </h1>
               <p className="hero-copy">
-                Search a public certificate ID to inspect one project&apos;s saved proof, score signals, and verification state without rerunning analysis.
+                Open saved project proof inside your dashboard without leaving the authenticated workspace.
               </p>
             </div>
 
@@ -42,10 +30,10 @@ export default function VerifyIndexPage() {
                   <Fingerprint className="h-5 w-5" />
                 </div>
                 <p className="mt-4 text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-                  Main use
+                  Dashboard use
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-white/85">
-                  Open one saved certificate record and check whether its proof is trusted.
+                  Review your saved certificate records while keeping the dashboard sidebar visible.
                 </p>
               </article>
               <article className="rounded-[1.4rem] border border-white/10 bg-background/45 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
@@ -63,7 +51,10 @@ export default function VerifyIndexPage() {
           </div>
         </section>
 
-        <VerifyIndexClient />
+        <VerifyIndexClient
+          recordBasePath="/dashboard/verify"
+          variant="dashboard"
+        />
       </div>
     </main>
   );

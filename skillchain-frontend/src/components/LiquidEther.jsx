@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/unsupported-syntax, @typescript-eslint/no-unused-vars */
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import './LiquidEther.css';
@@ -998,7 +999,7 @@ export default function LiquidEther({
             Common.renderer.dispose();
             Common.renderer.forceContextLoss();
           }
-        } catch (e) {
+        } catch (_error) {
           void 0;
         }
       }
@@ -1078,14 +1079,14 @@ export default function LiquidEther({
       if (resizeObserverRef.current) {
         try {
           resizeObserverRef.current.disconnect();
-        } catch (e) {
+        } catch (_error) {
           void 0;
         }
       }
       if (intersectionObserverRef.current) {
         try {
           intersectionObserverRef.current.disconnect();
-        } catch (e) {
+        } catch (_error) {
           void 0;
         }
       }

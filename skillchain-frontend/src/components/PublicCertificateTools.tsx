@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Check, Copy, ExternalLink, QrCode } from "lucide-react";
 
 function resolveUrl(value: string | null | undefined) {
@@ -15,10 +16,12 @@ export default function PublicCertificateTools({
   certificateId,
   verificationUrl,
   compact = false,
+  recordHrefBase = "/verify",
 }: {
   certificateId: string;
   verificationUrl?: string | null;
   compact?: boolean;
+  recordHrefBase?: string;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -67,15 +70,15 @@ export default function PublicCertificateTools({
 
           <div className="flex flex-wrap gap-3">
             <Link
-              href={`/verify/${certificateId}`}
-              className="inline-flex items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
+              href={`${recordHrefBase}/${certificateId}`}
+              className="inline-flex cursor-pointer items-center gap-2 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
             >
               Open Public Record
               <ExternalLink className="h-4 w-4" />
             </Link>
             <Link
               href={`/verify/profile/${certificateId}`}
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+              className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
             >
               View Profile
               <ExternalLink className="h-4 w-4" />
@@ -88,9 +91,12 @@ export default function PublicCertificateTools({
             <QrCode className="h-4 w-4" />
             QR Access
           </div>
-          <img
+          <Image
             src={qrUrl}
             alt="QR code for public certificate"
+            width={128}
+            height={128}
+            unoptimized
             className="h-32 w-32 rounded-xl bg-white p-2"
           />
           <p className="mt-2 text-xs text-muted">Scan to open the public certificate page.</p>

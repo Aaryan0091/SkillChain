@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
-import DashboardClient from "./DashboardClient";
 import { fetchDashboardProjects } from "@/lib/dashboard-data";
 import { getSessionUser } from "@/utils/supabase/server";
+import ProjectsClient from "./ProjectsClient";
 
-export default async function DashboardPage() {
+export default async function ProjectsPage() {
   const user = await getSessionUser();
 
   if (!user) {
@@ -12,5 +12,5 @@ export default async function DashboardPage() {
 
   const initialProjects = await fetchDashboardProjects(user.id).catch(() => []);
 
-  return <DashboardClient initialProjects={initialProjects} />;
+  return <ProjectsClient initialProjects={initialProjects} />;
 }

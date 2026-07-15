@@ -93,6 +93,45 @@ async function githubRequest(path) {
   return response.json();
 }
 
+async function fetchRepositoryMetadata(repoUrl) {
+  const parsed = parseGitHubRepoUrl(repoUrl);
+  const repo = await githubRequest(`/repos/${parsed.owner}/${parsed.repo}`);
+
+  return {
+    id: repo.id,
+    fullName: repo.full_name,
+    name: repo.name,
+    htmlUrl: repo.html_url,
+    defaultBranch: repo.default_branch,
+    private: Boolean(repo.private),
+    owner: {
+      login: repo.owner?.login || parsed.owner,
+      id:
+        typeof repo.owner?.id === "number" || typeof repo.owner?.id === "string"
+          ? String(repo.owner.id)
+          : null,
+      type: repo.owner?.type || null,
+    },
+  };
+}
+
+async function fetchRepositoryContributors(repoUrl) {
+  const parsed = parseGitHubRepoUrl(repoUrl);
+  const contributors = await githubRequest(
+    `/repos/${parsed.owner}/${parsed.repo}/contributors?per_page=100`
+  ).catch(() => []);
+
+  if (!Array.isArray(contributors)) {
+    return [];
+  }
+
+  return contributors
+    .map((contributor) =>
+      typeof contributor?.login === "string" ? contributor.login.trim().toLowerCase() : null
+    )
+    .filter(Boolean);
+}
+
 async function fetchRepositorySnapshot(repoUrl, branchOverride) {
   const parsed = parseGitHubRepoUrl(repoUrl);
   const repo = await githubRequest(`/repos/${parsed.owner}/${parsed.repo}`);
@@ -142,6 +181,8 @@ async function fetchBlobText(owner, repo, sha) {
 
 module.exports = {
   fetchBlobText,
+  fetchRepositoryContributors,
+  fetchRepositoryMetadata,
   fetchRepositorySnapshot,
   parseGitHubRepoUrl,
 };

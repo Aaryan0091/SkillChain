@@ -1,3 +1,4 @@
+import { unstable_noStore as noStore } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 
 export type MetricRecord = {
@@ -90,9 +91,11 @@ export type CertificateWithProjectRecord = CertificateRecord & {
   projects?: ProjectRecord | ProjectRecord[];
 };
 
-export async function fetchDashboardProjects() {
+export async function fetchDashboardProjects(userId?: string) {
+  noStore();
+
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("projects")
     .select(
       `
@@ -134,6 +137,12 @@ export async function fetchDashboardProjects() {
     `
     )
     .order("created_at", { ascending: false });
+
+  if (userId) {
+    query = query.eq("user_id", userId);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(error.message || "Could not load dashboard projects.");

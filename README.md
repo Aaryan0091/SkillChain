@@ -200,7 +200,15 @@ Optional:
 - `BLOCKCHAIN_CONTRACT_ADDRESS`
 
 If `BLOCKCHAIN_CONTRACT_ADDRESS` is empty, SkillChain uses the trusted-chain-record mode.
-If it is set, SkillChain sends the anchor transaction to that configured address.
+If it is set, SkillChain writes certificate hashes into the SkillChain registry contract and reads them back again during public verification.
+
+The repo now includes the contract source at:
+
+- `skillchain-backend/contracts/SkillChainCertificateRegistry.sol`
+
+The backend ABI used for live reads and writes is:
+
+- `skillchain-backend/src/contracts/skillchain-certificate-registry.abi.json`
 
 ## Target Architecture
 

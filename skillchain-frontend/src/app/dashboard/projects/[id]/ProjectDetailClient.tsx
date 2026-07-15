@@ -19,7 +19,14 @@ import {
   Trash2,
   TrendingUp,
 } from "lucide-react";
+import ConfirmModal from "@/components/ConfirmModal";
+import EmptyStateCard from "@/components/EmptyStateCard";
+import StatePanel from "@/components/StatePanel";
+import VerificationStatusLegend from "@/components/VerificationStatusLegend";
+import { averageNumbers, formatDateTime, formatLongDate, titleCase } from "@/lib/formatting";
+import { statusTone } from "@/lib/status";
 import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
+import { resolveCertificateVerification } from "@/lib/certificate-verification";
 import { createClient } from "@/utils/supabase/client";
 
 type MetricRecord = {
@@ -59,6 +66,7 @@ type CertificateRecord = {
   id: string;
   status: string | null;
   verification_status?: string | null;
+  verification_reason?: string | null;
   created_at: string | null;
   certificate_hash?: string | null;
 };
@@ -87,70 +95,8 @@ type ProjectRecord = {
   analysis_jobs?: AnalysisJobRecord[];
 };
 
-function formatDate(value: string | null) {
-  if (!value) return "Unknown";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unknown";
-
-  return date.toLocaleDateString(undefined, {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) return "Unknown";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unknown";
-
-  return date.toLocaleString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function titleCase(value: string) {
-  return value
-    .split(/[\s._-]+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
-function statusTone(status: string) {
-  switch (status) {
-    case "completed":
-    case "issued":
-      return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
-    case "processing":
-      return "border-sky-400/20 bg-sky-400/10 text-sky-300";
-    case "failed":
-      return "border-red-400/20 bg-red-400/10 text-red-300";
-    case "verified":
-      return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
-    case "pending":
-      return "border-amber-400/20 bg-amber-400/10 text-amber-300";
-    default:
-      return "border-white/10 bg-white/5 text-muted";
-  }
-}
-
 function certificateBadgeState(certificate: CertificateRecord) {
-  if (certificate.verification_status === "verified") return "verified";
-  if (certificate.verification_status === "failed") return "failed";
-  if (certificate.status === "failed") return "failed";
-  if (certificate.status === "issued") return "issued";
-  return certificate.status || "pending";
-}
-
-function average(values: Array<number | null | undefined>) {
-  const valid = values.filter((value): value is number => typeof value === "number");
-  if (!valid.length) return null;
-  return Math.round(valid.reduce((sum, value) => sum + value, 0) / valid.length);
+  return resolveCertificateVerification(certificate).state;
 }
 
 async function fetchProject(projectId: string) {
@@ -207,6 +153,33 @@ async function deleteProjectClient(projectId: string) {
   }
 }
 
+async function deleteCertificateClient(certificateId: string) {
+  const supabase = createClient();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.access_token) {
+    throw new Error("Please sign in again to remove this certificate.");
+  }
+
+  const response = await fetch(
+    buildSkillchainApiUrl(`/projects/certificates/${certificateId}`),
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
+    }
+  );
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Could not remove certificate.");
+  }
+}
+
 export default function ProjectDetailClient({ projectId }: { projectId: string }) {
   const router = useRouter();
   const [project, setProject] = useState<ProjectRecord | null>(null);
@@ -214,6 +187,8 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
   const [isLoading, setIsLoading] = useState(true);
   const [showRemoveModal, setShowRemoveModal] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
+  const [pendingCertificateRemoval, setPendingCertificateRemoval] = useState<CertificateRecord | null>(null);
+  const [isRemovingCertificate, setIsRemovingCertificate] = useState(false);
 
   useEffect(() => {
     let isActive = true;
@@ -282,21 +257,12 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
   if (!project) {
     return (
       <main className="w-full px-4 pb-12 pt-4 sm:px-6 sm:pb-14 lg:px-8 lg:pb-16">
-        <section className="rounded-[2.5rem] border border-red-500/20 bg-red-500/10 p-8 shadow-[0_24px_70px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-red-300">
-            Project unavailable
-          </p>
-          <h1 className="mt-4 text-3xl font-semibold text-white">We couldn&apos;t load this project.</h1>
-          <p className="mt-3 max-w-2xl text-sm leading-relaxed text-red-200/90">
-            {loadError || "The requested project could not be found for your account."}
-          </p>
-          <Link
-            href="/dashboard"
-            className="mt-6 inline-flex rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
-          >
-            Back to Dashboard
-          </Link>
-        </section>
+        <EmptyStateCard
+          title="We could not load this project"
+          message={loadError || "The requested project could not be found for your account."}
+          actionHref="/dashboard"
+          actionLabel="Back to Overview"
+        />
       </main>
     );
   }
@@ -309,7 +275,7 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
   const risks = score?.score_breakdown_json?.risks || [];
   const evidence = score?.score_breakdown_json?.skillEvidence || [];
   const frameworks = metric?.raw_metrics_json?.frameworks || [];
-  const overall = average([
+  const overall = averageNumbers([
     score?.backend_score,
     score?.architecture_score,
     score?.documentation_score,
@@ -369,45 +335,54 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
 
   return (
     <main className="w-full px-4 pb-12 pt-4 sm:px-6 sm:pb-14 lg:px-8 lg:pb-16">
-      {showRemoveModal ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-surface/95 p-6 shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300">
-              Confirm removal
-            </p>
-            <h3 className="mt-3 text-2xl font-semibold text-white">
-              Remove this saved repository?
-            </h3>
-            <p className="mt-3 text-sm leading-relaxed text-muted">
-              This will remove <span className="font-semibold text-white">{project.repo_name}</span>{" "}
-              from your saved projects and it will no longer appear in your recent repository reads.
-            </p>
-            <p className="mt-2 text-sm leading-relaxed text-muted">
-              Its linked saved metrics, scores, jobs, and certificate records will also be deleted.
-            </p>
-
-            <div className="mt-6 flex flex-wrap justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowRemoveModal(false)}
-                disabled={isRemoving}
-                className="inline-flex cursor-pointer items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleRemoveProject}
-                disabled={isRemoving}
-                className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-200 transition-colors hover:bg-red-400/15 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <Trash2 className="h-4 w-4" />
-                {isRemoving ? "Removing..." : "Yes, remove it"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <ConfirmModal
+        open={showRemoveModal}
+        title="Remove this saved repository?"
+        description={`This will remove ${project.repo_name} from your saved projects and it will no longer appear in your recent repository reads.`}
+        detail="Its linked saved metrics, scores, jobs, and certificate records will also be deleted."
+        confirmLabel="Yes, remove it"
+        busy={isRemoving}
+        onCancel={() => setShowRemoveModal(false)}
+        onConfirm={() => void handleRemoveProject()}
+      />
+      <ConfirmModal
+        open={Boolean(pendingCertificateRemoval)}
+        title="Remove this certificate?"
+        description={
+          pendingCertificateRemoval
+            ? `This will remove certificate ${pendingCertificateRemoval.id} from this project.`
+            : ""
+        }
+        detail="The project will stay saved, but this issued certificate row will be deleted so you can re-run or regenerate proof cleanly."
+        confirmLabel="Yes, remove certificate"
+        busy={isRemovingCertificate}
+        onCancel={() => setPendingCertificateRemoval(null)}
+        onConfirm={async () => {
+          if (!pendingCertificateRemoval) return;
+          setIsRemovingCertificate(true);
+          try {
+            await deleteCertificateClient(pendingCertificateRemoval.id);
+            setProject((currentProject) =>
+              currentProject
+                ? {
+                    ...currentProject,
+                    certificates: (currentProject.certificates || []).filter(
+                      (item) => item.id !== pendingCertificateRemoval.id
+                    ),
+                  }
+                : currentProject
+            );
+            setPendingCertificateRemoval(null);
+            setIsRemovingCertificate(false);
+          } catch (error) {
+            setIsRemovingCertificate(false);
+            setPendingCertificateRemoval(null);
+            setLoadError(
+              error instanceof Error ? error.message : "Could not remove certificate."
+            );
+          }
+        }}
+      />
 
       <section className="relative overflow-hidden rounded-[2.5rem] border border-border/70 bg-surface/50 shadow-[0_24px_70px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,0.16),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(59,130,246,0.14),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.03),transparent_58%)]" />
@@ -418,7 +393,14 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
               <Sparkles className="h-3.5 w-3.5" />
               Saved Project Record
             </span>
-            <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 ${statusTone(project.analysis_status)}`}>
+            <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 ${statusTone(project.analysis_status, {
+              completed: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+              issued: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+              processing: "border-sky-400/20 bg-sky-400/10 text-sky-300",
+              failed: "border-red-400/20 bg-red-400/10 text-red-300",
+              verified: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+              pending: "border-amber-400/20 bg-amber-400/10 text-amber-300",
+            })}`}>
               <Clock3 className="h-3.5 w-3.5" />
               {titleCase(project.analysis_status)}
             </span>
@@ -441,6 +423,13 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                   project.analysis_error ||
                   "This repository has been saved and now has its own project-level certificate and verification record."}
               </p>
+              {loadError ? (
+                <StatePanel
+                  variant="warning"
+                  title="Some project actions need attention"
+                  message={loadError}
+                />
+              ) : null}
 
               <div className="flex flex-wrap gap-3 text-sm text-muted">
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
@@ -449,7 +438,7 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                 </span>
                 <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5">
                   <Clock3 className="h-4 w-4 text-accent" />
-                  Last analyzed {formatDate(project.last_analyzed_at || project.created_at)}
+                  Last analyzed {formatLongDate(project.last_analyzed_at || project.created_at)}
                 </span>
               </div>
 
@@ -465,10 +454,19 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                 </a>
                 {certificates[0] ? (
                   <Link
-                    href={`/verify/${certificates[0].id}`}
-                    className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
+                    href={`/dashboard/certificates/${certificates[0].id}`}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
                   >
-                    Open verification record
+                    Open project certificate
+                    <ArrowUpRight className="h-4 w-4" />
+                  </Link>
+                ) : null}
+                {certificates[0] ? (
+                  <Link
+                    href={`/verify/${certificates[0].id}`}
+                    className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-4 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent/15"
+                  >
+                    Open public verify
                     <ArrowUpRight className="h-4 w-4" />
                   </Link>
                 ) : null}
@@ -547,6 +545,35 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
             </div>
           </section>
 
+          <section className="rounded-[2rem] border border-border/70 bg-surface/40 p-6 shadow-sm backdrop-blur-xl">
+            <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-white">
+              <Activity className="h-5 w-5 text-accent" />
+              Audit trail
+            </h2>
+            <div className="mt-5 grid gap-4 md:grid-cols-3">
+              <article className="rounded-[1.3rem] border border-white/8 bg-background/40 p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-muted">Saved summary</p>
+                <p className="mt-2 text-sm leading-relaxed text-white/85">
+                  {score?.explanation || metric?.raw_metrics_json?.summary || "No saved summary yet."}
+                </p>
+              </article>
+              <article className="rounded-[1.3rem] border border-white/8 bg-background/40 p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-muted">Evidence used</p>
+                <p className="mt-2 text-sm leading-relaxed text-white/85">
+                  {evidence.length} skill signals, {frameworks.length} frameworks, and {strengths.length + risks.length} written notes contributed to this saved score.
+                </p>
+              </article>
+              <article className="rounded-[1.3rem] border border-white/8 bg-background/40 p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-muted">Current proof state</p>
+                <p className="mt-2 text-sm leading-relaxed text-white/85">
+                  {certificates[0]
+                    ? resolveCertificateVerification(certificates[0], project).summary
+                    : "No certificate has been issued for this project yet."}
+                </p>
+              </article>
+            </div>
+          </section>
+
           <section className="grid gap-6 lg:grid-cols-2">
             <section className="rounded-[2rem] border border-border/70 bg-surface/40 p-6 shadow-sm backdrop-blur-xl">
               <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-white">
@@ -609,11 +636,19 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
           <section className="rounded-[2rem] border border-border/70 bg-surface/40 p-6 shadow-sm backdrop-blur-xl">
             <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-white">
               <Fingerprint className="h-5 w-5 text-accent" />
-              Verification record
+              Project proof record
             </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              This project is the main source record. Its certificate and public verification links are attached below as proof of this one repository.
+            </p>
+            <div className="mt-5">
+              <VerificationStatusLegend compact title="Certificate status in plain words" />
+            </div>
             <div className="mt-5 space-y-4">
               {certificates.length ? (
-                certificates.map((certificate) => (
+                certificates.map((certificate) => {
+                  const verification = resolveCertificateVerification(certificate, project);
+                  return (
                   <article
                     key={certificate.id}
                     className="rounded-[1.3rem] border border-white/8 bg-background/40 p-4"
@@ -625,7 +660,14 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                       {certificate.id}
                     </p>
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusTone(certificateBadgeState(certificate))}`}>
+                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusTone(certificateBadgeState(certificate), {
+                        completed: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+                        issued: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+                        processing: "border-sky-400/20 bg-sky-400/10 text-sky-300",
+                        failed: "border-red-400/20 bg-red-400/10 text-red-300",
+                        verified: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+                        pending: "border-amber-400/20 bg-amber-400/10 text-amber-300",
+                      })}`}>
                         {titleCase(certificate.verification_status || certificate.status || "pending")}
                       </span>
                       <div className="flex flex-wrap items-center gap-3">
@@ -636,15 +678,26 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                           View certificate
                         </Link>
                         <Link
-                          href={`/verify/${certificate.id}`}
+                          href={`/dashboard/verify/${certificate.id}`}
                           className="text-sm font-semibold text-accent transition-colors hover:text-accent/80"
                         >
                           Open verification record
                         </Link>
+                        <button
+                          type="button"
+                          onClick={() => setPendingCertificateRemoval(certificate)}
+                          disabled={isRemovingCertificate}
+                          className="text-sm font-semibold text-red-300 transition-colors hover:text-red-200 disabled:opacity-60 cursor-pointer"
+                        >
+                          Remove certificate
+                        </button>
                       </div>
                     </div>
                     <p className="mt-3 text-xs text-muted">
-                      Issued {formatDate(certificate.created_at)}
+                      Issued {formatLongDate(certificate.created_at)}
+                    </p>
+                    <p className="mt-3 text-sm leading-relaxed text-muted">
+                      Reason: {verification.reason}
                     </p>
                     {certificate.certificate_hash ? (
                       <p className="mt-3 break-all rounded-xl border border-white/8 bg-white/5 p-2 font-mono text-[11px] text-white/80">
@@ -652,9 +705,13 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                       </p>
                     ) : null}
                   </article>
-                ))
+                )})
               ) : (
-                <p className="text-sm text-muted">No verification record has been saved yet.</p>
+                <EmptyStateCard
+                  compact
+                  title="No verification record saved yet"
+                  message="This project exists, but its certificate proof record has not been issued yet."
+                />
               )}
             </div>
           </section>
@@ -677,7 +734,15 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                       <p className="font-medium capitalize text-white">
                         {job.job_type.replace(/_/g, " ")}
                       </p>
-                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusTone(job.status)}`}>
+                      <span className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${statusTone(job.status, {
+                        completed: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+                        issued: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+                        processing: "border-sky-400/20 bg-sky-400/10 text-sky-300",
+                        failed: "border-red-400/20 bg-red-400/10 text-red-300",
+                        verified: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+                        pending: "border-amber-400/20 bg-amber-400/10 text-amber-300",
+                        running: "border-sky-400/20 bg-sky-400/10 text-sky-300",
+                      })}`}>
                         {job.status}
                       </span>
                     </div>
@@ -693,7 +758,11 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                   </article>
                 ))
               ) : (
-                <p className="text-sm text-muted">No saved jobs yet.</p>
+                <EmptyStateCard
+                  compact
+                  title="No saved jobs yet"
+                  message="Background processing history will appear here after analysis runs."
+                />
               )}
             </div>
           </section>

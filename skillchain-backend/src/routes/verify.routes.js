@@ -11,6 +11,7 @@ router.get("/", async (req, res) => {
   const limit = Number(req.query.limit || 4);
 
   try {
+    res.set("Cache-Control", "no-store");
     const certificates = await fetchPublicCertificates(
       Number.isFinite(limit) ? limit : 4
     );
@@ -29,6 +30,7 @@ router.get("/", async (req, res) => {
 
 router.get("/:certificateId", async (req, res) => {
   try {
+    res.set("Cache-Control", "no-store");
     let certificate = await fetchPublicCertificateById(req.params.certificateId);
 
     if (!certificate) {
@@ -38,7 +40,7 @@ router.get("/:certificateId", async (req, res) => {
       });
     }
 
-    if (certificate.verification_status === "pending") {
+    if (certificate.certificate_hash) {
       certificate =
         (await finalizeCertificateVerification(req.params.certificateId)) || certificate;
     }
@@ -57,6 +59,7 @@ router.get("/:certificateId", async (req, res) => {
 
 router.post("/:certificateId/finalize", async (req, res) => {
   try {
+    res.set("Cache-Control", "no-store");
     const certificate = await finalizeCertificateVerification(req.params.certificateId);
 
     if (!certificate) {

@@ -3,7 +3,12 @@
 import Link from "next/link";
 import { useEffect, useState, startTransition } from "react";
 import { Trash2 } from "lucide-react";
+import ConfirmModal from "@/components/ConfirmModal";
+import EmptyStateCard from "@/components/EmptyStateCard";
+import StatePanel from "@/components/StatePanel";
+import { formatLongDate } from "@/lib/formatting";
 import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
+import { resolveCertificateVerification } from "@/lib/certificate-verification";
 import { createClient } from "@/utils/supabase/client";
 
 type ScoreRecord = {
@@ -46,36 +51,11 @@ function repoLabel(project: ProjectRecord) {
 }
 
 function certificateStatus(certificate: CertificateRecord) {
-  if (certificate.verification_status === "verified") {
-    return {
-      label: "Verification Complete",
-      badgeClass: "bg-accent/10 text-accent border-accent/20",
-    };
-  }
-
-  if (certificate.verification_status === "failed" || certificate.status === "failed") {
-    return {
-      label: "Verification Failed",
-      badgeClass: "bg-red-500/10 text-red-300 border-red-400/20",
-    };
-  }
-
+  const verification = resolveCertificateVerification(certificate);
   return {
-    label: "Project Certificate Issued",
-    badgeClass: "bg-[#a8f5e9]/10 text-[#a8f5e9] border-[#a8f5e9]/30",
+    label: verification.headline,
+    badgeClass: verification.badgeClass,
   };
-}
-
-function formatDate(value: string | null) {
-  if (!value) return "Unknown";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unknown";
-
-  return date.toLocaleDateString(undefined, {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
 }
 
 function projectScore(project: ProjectRecord) {
@@ -235,62 +215,40 @@ export default function CertificatesClient() {
           Project Certificates
         </h1>
         <p className="max-w-2xl text-base leading-relaxed text-muted">
-          Each analyzed repository gets its own saved certificate record here, along with its verification state.
+          This is a secondary archive of issued project proof records. The clearest explanation still lives on each project detail page.
         </p>
         {loadError ? (
-          <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-            {loadError}
-          </p>
+          <StatePanel
+            variant="error"
+            title="Could not load certificates"
+            message={loadError}
+          />
         ) : null}
         {actionError ? (
-          <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-            {actionError}
-          </p>
+          <StatePanel
+            variant="error"
+            title="Certificate action failed"
+            message={actionError}
+          />
         ) : null}
       </section>
 
-      {pendingRemoval ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-[2rem] border border-white/10 bg-surface/95 p-6 shadow-[0_30px_90px_rgba(0,0,0,0.45)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300">
-              Confirm removal
-            </p>
-            <h3 className="mt-3 text-2xl font-semibold text-white">
-              Remove this certificate?
-            </h3>
-            <p className="mt-3 text-sm leading-relaxed text-muted">
-              This will remove the issued certificate for{" "}
-              <span className="font-semibold text-white">{pendingRemoval.repo}</span> from your
-              profile certificate list.
-            </p>
-            <p className="mt-2 text-sm leading-relaxed text-muted">
-              The project record will stay saved, but this certificate row will be deleted.
-            </p>
-
-            <div className="mt-6 flex flex-wrap justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setPendingRemoval(null)}
-                disabled={removingCertificateId === pendingRemoval.certificateId}
-                className="inline-flex cursor-pointer items-center rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={confirmRemoveCertificate}
-                disabled={removingCertificateId === pendingRemoval.certificateId}
-                className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-semibold text-red-200 transition-colors hover:bg-red-400/15 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <Trash2 className="h-4 w-4" />
-                {removingCertificateId === pendingRemoval.certificateId
-                  ? "Removing..."
-                  : "Yes, remove it"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <ConfirmModal
+        open={Boolean(pendingRemoval)}
+        title="Remove this certificate?"
+        description={
+          pendingRemoval
+            ? `This will remove the issued certificate for ${pendingRemoval.repo} from your profile certificate list.`
+            : ""
+        }
+        detail="The project record will stay saved, but this certificate row will be deleted."
+        confirmLabel="Yes, remove it"
+        busy={Boolean(
+          pendingRemoval && removingCertificateId === pendingRemoval.certificateId
+        )}
+        onCancel={() => setPendingRemoval(null)}
+        onConfirm={() => void confirmRemoveCertificate()}
+      />
 
       <section className="grid gap-5 lg:grid-cols-[1.25fr_0.75fr] lg:gap-6">
         <div className="rounded-[2rem] border border-border/70 bg-surface/50 p-6 shadow-sm backdrop-blur-xl">
@@ -298,11 +256,11 @@ export default function CertificatesClient() {
             <div>
               <h2 className="text-xl font-semibold tracking-tight">Issued Project Certificates</h2>
               <p className="mt-1 text-sm text-muted">
-                These cards reflect one certificate record per analyzed project.
+                One certificate row per analyzed project, gathered here for quick access.
               </p>
             </div>
             <Link
-              href="/submit"
+              href="/dashboard/submit"
               className="rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-surface-strong"
             >
               Analyze New Repo
@@ -340,7 +298,7 @@ export default function CertificatesClient() {
                         </p>
                         <h3 className="text-lg font-semibold text-foreground">{certificate.repo}</h3>
                         <p className="text-sm text-muted">
-                          Issued on {formatDate(certificate.created_at)}
+                          Issued on {formatLongDate(certificate.created_at)}
                         </p>
                       </div>
 
@@ -373,7 +331,7 @@ export default function CertificatesClient() {
                           View Project
                         </Link>
                         <Link
-                          href={`/verify/${certificate.id}`}
+                          href={`/dashboard/verify/${certificate.id}`}
                           className="rounded-full bg-accent px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-accent/90"
                         >
                           Open Verification Record
@@ -401,9 +359,13 @@ export default function CertificatesClient() {
                 );
               })
             ) : (
-              <div className="rounded-[1.5rem] border border-border/60 bg-background/70 p-5 text-sm text-muted">
-                No project certificates yet. Analyze a repository first to create a saved certificate row.
-              </div>
+              <EmptyStateCard
+                compact
+                title="No project certificates yet"
+                message="Analyze and save a repository first. Its certificate record will show up here once issued."
+                actionHref="/dashboard/submit"
+                actionLabel="Analyze a repository"
+              />
             )}
           </div>
         </div>
@@ -412,6 +374,7 @@ export default function CertificatesClient() {
           <h2 className="text-xl font-semibold tracking-tight">What This Area Shows</h2>
           <div className="mt-5 space-y-4 text-sm leading-relaxed text-muted">
             <p>One certificate record for each analyzed repository.</p>
+            <p>Projects remain the primary unit. Certificates are proof attached to those projects.</p>
             <p>Separate certificate issuance and blockchain verification states.</p>
             <p>
               Direct links into the public verification route so you can inspect the recruiter-facing project proof.

@@ -1,6 +1,9 @@
 const express = require("express");
 const { env } = require("../config/env");
-const { isBlockchainConfigured } = require("../services/blockchain.service");
+const {
+  isBlockchainConfigured,
+  isContractModeConfigured,
+} = require("../services/blockchain.service");
 
 const router = express.Router();
 
@@ -9,7 +12,9 @@ function missingBlockchainConfig() {
 
   if (!env.blockchainRpcUrl) missing.push("BLOCKCHAIN_RPC_URL");
   if (!env.blockchainPrivateKey) missing.push("BLOCKCHAIN_PRIVATE_KEY");
-  if (!env.issuerWalletAddress) missing.push("ISSUER_WALLET_ADDRESS");
+  if (!env.blockchainContractAddress && !env.issuerWalletAddress) {
+    missing.push("ISSUER_WALLET_ADDRESS");
+  }
 
   return missing;
 }
@@ -21,10 +26,14 @@ router.get("/", (_req, res) => {
     environment: env.nodeEnv,
     supabaseConfigured: Boolean(env.supabaseUrl && env.supabaseAnonKey),
     githubConfigured: Boolean(env.githubToken),
-    blockchainConfigured: Boolean(env.blockchainRpcUrl),
+    blockchainConfigured: Boolean(
+      env.blockchainRpcUrl &&
+        env.blockchainPrivateKey &&
+        (env.blockchainContractAddress || env.issuerWalletAddress)
+    ),
     blockchainReady: isBlockchainConfigured(),
-    blockchainMode: env.blockchainContractAddress
-      ? "smart_contract_or_target_address"
+    blockchainMode: isContractModeConfigured()
+      ? "smart_contract_registry"
       : "trusted_chain_record",
     blockchainMissingConfig: missingBlockchainConfig(),
     timestamp: new Date().toISOString(),

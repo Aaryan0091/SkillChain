@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
+import StatePanel from "@/components/StatePanel";
 import { 
   ShieldCheck, GitCommit, Award, Terminal, 
   Activity, Code, Calendar, Clock, 
@@ -18,10 +20,31 @@ interface ProfileClientProps {
     lastSignIn: string;
     provider: string;
   };
+  profileStats: {
+    repositoriesAnalyzed: number;
+    certificatesIssued: number;
+    verifiedCertificates: number;
+    confidenceAverage: number | null;
+    architectureAverage: number | null;
+  };
+  verifiedSkills: Array<{
+    name: string;
+    score: number;
+    projectCount: number;
+    totalProjects: number;
+    color: string;
+  }>;
+  loadError: string | null;
   signOutAction: () => Promise<void>;
 }
 
-export default function ProfileClient({ user, signOutAction }: ProfileClientProps) {
+export default function ProfileClient({
+  user,
+  profileStats,
+  verifiedSkills,
+  loadError,
+  signOutAction,
+}: ProfileClientProps) {
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -34,13 +57,6 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
     hidden: { opacity: 0, y: 20 },
     show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 24 } }
   };
-
-  const verifiedSkills = [
-    { name: "TypeScript", score: 96, color: "bg-blue-500" },
-    { name: "React / Next.js", score: 92, color: "bg-cyan-400" },
-    { name: "Solidity & Web3", score: 88, color: "bg-purple-500" },
-    { name: "Node.js & Backend", score: 85, color: "bg-emerald-500" }
-  ];
 
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6 pb-8 sm:space-y-8 sm:pb-10">
@@ -56,6 +72,15 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
         <p className="mt-2 max-w-2xl text-base text-muted-foreground sm:text-lg">
           Comprehensive analysis of your developer identity, backed by AI assessment and secure verification.
         </p>
+        {loadError ? (
+          <div className="pt-3">
+            <StatePanel
+              variant="warning"
+              title="Profile data could not refresh fully"
+              message={`${loadError} The visible numbers may be incomplete until the data loads successfully.`}
+            />
+          </div>
+        ) : null}
       </motion.div>
 
       <motion.div 
@@ -89,22 +114,31 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
 
               <h2 className="text-2xl font-bold text-white mb-1">{user.displayName}</h2>
               <p className="text-emerald-400 font-medium mb-4 flex items-center gap-1.5 justify-center">
-                <Star className="h-4 w-4" /> Top 1% Developer
+                <Star className="h-4 w-4" /> SkillChain verified account
               </p>
+
+              <div className="mb-4 flex flex-wrap justify-center gap-2">
+                <Link
+                  href="/dashboard/settings"
+                  className="inline-flex cursor-pointer items-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white/10"
+                >
+                  Account settings
+                </Link>
+              </div>
               
               <div className="w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent my-6" />
               
               <div className="w-full space-y-4">
                 <div className="flex justify-between items-center bg-white/5 rounded-xl p-3 border border-white/5 transition-colors hover:bg-white/10">
-                  <span className="text-sm text-muted-foreground">Trust Score</span>
+                  <span className="text-sm text-muted-foreground">Repositories</span>
                   <span className="text-lg font-bold text-white flex items-center gap-1">
-                    99.8 <span className="text-emerald-400 text-sm">/100</span>
+                    {profileStats.repositoriesAnalyzed}
                   </span>
                 </div>
                 <div className="flex justify-between items-center bg-white/5 rounded-xl p-3 border border-white/5 transition-colors hover:bg-white/10">
-                  <span className="text-sm text-muted-foreground">Status</span>
+                  <span className="text-sm text-muted-foreground">Certificates</span>
                   <span className="text-sm font-semibold text-[#0f172a] bg-emerald-400 px-2.5 py-1 rounded-md border border-emerald-300">
-                    Fully Verified
+                    {profileStats.certificatesIssued} issued
                   </span>
                 </div>
               </div>
@@ -170,8 +204,8 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
                 <div className="h-12 w-12 rounded-xl bg-accent/10 flex items-center justify-center mb-4 border border-accent/20">
                   <GitCommit className="h-6 w-6 text-accent" />
                 </div>
-                <h4 className="text-4xl font-bold text-white mb-2">2,491</h4>
-                <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wider">Commits Analyzed</p>
+                <h4 className="text-4xl font-bold text-white mb-2">{profileStats.repositoriesAnalyzed}</h4>
+                <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wider">Repositories Analyzed</p>
               </div>
             </motion.div>
 
@@ -183,8 +217,8 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
                 <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center mb-4 border border-blue-500/20">
                   <Layers className="h-6 w-6 text-blue-400" />
                 </div>
-                <h4 className="text-4xl font-bold text-white mb-2">34</h4>
-                <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wider">Repositories Verified</p>
+                <h4 className="text-4xl font-bold text-white mb-2">{profileStats.certificatesIssued}</h4>
+                <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wider">Certificates Issued</p>
               </div>
             </motion.div>
 
@@ -196,8 +230,10 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
                 <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-4 border border-purple-500/20">
                   <Award className="h-6 w-6 text-purple-400" />
                 </div>
-                <h4 className="text-4xl font-bold text-white mb-2 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">A+</h4>
-                <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wider">Code Quality Grade</p>
+                <h4 className="text-4xl font-bold text-white mb-2 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+                  {profileStats.verifiedCertificates}
+                </h4>
+                <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wider">Verified Certificates</p>
               </div>
             </motion.div>
 
@@ -210,9 +246,10 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
                   <Activity className="h-6 w-6 text-emerald-400" />
                 </div>
                 <h4 className="text-4xl font-bold text-white mb-2 flex items-baseline gap-1">
-                  99.9 <span className="text-xl text-emerald-400 font-bold">%</span>
+                  {profileStats.confidenceAverage ?? 0}
+                  <span className="text-xl text-emerald-400 font-bold">%</span>
                 </h4>
-                <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wider">Authenticity Rating</p>
+                <p className="text-sm text-muted-foreground font-semibold uppercase tracking-wider">Average Confidence</p>
               </div>
             </motion.div>
           </div>
@@ -225,7 +262,9 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
                   <Code className="h-6 w-6 text-accent" />
                   Verified Tech Stack
                 </h3>
-                <p className="text-sm text-muted-foreground mt-2 max-w-sm">AI-assessed proficiency based on deep analysis of real commit history.</p>
+                <p className="text-sm text-muted-foreground mt-2 max-w-sm">
+                  Based only on saved repository evidence. Each percentage shows how many of your analyzed repositories contained that skill.
+                </p>
               </div>
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider self-start sm:self-auto">
                 <ShieldCheck className="h-4 w-4" />
@@ -234,12 +273,23 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
             </div>
 
             <div className="space-y-6">
-              {verifiedSkills.map((skill, index) => (
+              {(verifiedSkills.length
+                ? verifiedSkills
+                : [
+                    {
+                      name: "No saved skill evidence yet",
+                      score: 0,
+                      projectCount: 0,
+                      totalProjects: 0,
+                      color: "bg-white/20",
+                    },
+                  ]
+              ).map((skill, index) => (
                 <div key={index} className="space-y-3 group">
                   <div className="flex justify-between items-end">
                     <span className="text-sm font-bold text-white group-hover:text-accent transition-colors">{skill.name}</span>
                     <span className="text-xs font-mono font-semibold text-white/80 bg-white/5 px-2 py-0.5 rounded-md border border-white/10">
-                      Score: <span className="text-emerald-400">{skill.score}</span>
+                      Coverage: <span className="text-emerald-400">{skill.score}%</span>
                     </span>
                   </div>
                   <div className="h-3 w-full bg-[#0f172a]/80 rounded-full overflow-hidden border border-white/5 shadow-inner">
@@ -255,6 +305,9 @@ export default function ProfileClient({ user, signOutAction }: ProfileClientProp
                       />
                     </motion.div>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Seen in {skill.projectCount} of {skill.totalProjects} analyzed repositories.
+                  </p>
                 </div>
               ))}
             </div>

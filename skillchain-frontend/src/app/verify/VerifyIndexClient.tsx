@@ -11,8 +11,13 @@ import {
   Sparkles,
   Trophy,
 } from "lucide-react";
+import EmptyStateCard from "@/components/EmptyStateCard";
+import SectionSkeleton from "@/components/SectionSkeleton";
+import StatePanel from "@/components/StatePanel";
+import VerificationStatusLegend from "@/components/VerificationStatusLegend";
+import { resolveCertificateVerification } from "@/lib/certificate-verification";
 import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
-import VerifySearchForm from "./VerifySearchForm";
+import { VerifySearchFormInner } from "./VerifySearchForm";
 
 type PublicCertificateRecord = {
   id: string;
@@ -49,10 +54,7 @@ const recruiterChecks = [
 ];
 
 function certificateTag(certificate: PublicCertificateRecord) {
-  if (certificate.verification_status === "verified") return "Verified";
-  if (certificate.status === "verified") return "Verified";
-  if (certificate.status === "failed") return "Failed";
-  return "Pending";
+  return resolveCertificateVerification(certificate).badgeLabel;
 }
 
 function formatDate(value: string | null) {
@@ -80,7 +82,14 @@ async function fetchPublicCertificates() {
   return (result.data || []) as PublicCertificateRecord[];
 }
 
-export default function VerifyIndexClient() {
+export default function VerifyIndexClient({
+  recordBasePath = "/verify",
+  variant = "public",
+}: {
+  recordBasePath?: string;
+  variant?: "public" | "dashboard";
+}) {
+  const isDashboard = variant === "dashboard";
   const [certificates, setCertificates] = useState<PublicCertificateRecord[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -117,35 +126,43 @@ export default function VerifyIndexClient() {
 
   return (
     <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-12">
-      <div className="space-y-8 lg:col-span-5">
-        <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-surface/40 p-8 shadow-2xl backdrop-blur-xl">
+      <div className="space-y-6 lg:col-span-5">
+        <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-surface/40 p-5 shadow-2xl backdrop-blur-xl sm:p-6 lg:p-7">
           <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-accent/20 blur-[80px]" />
           <div className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-blue-500/10 blur-[80px]" />
 
           <div className="relative z-10">
-            <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-inner">
+            <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/5 shadow-inner">
               <Fingerprint className="h-6 w-6 text-white" />
             </div>
 
-            <h2 className="mb-2 text-2xl font-bold text-white">Lookup Public Record</h2>
-            <p className="mb-8 text-sm text-muted-foreground">
-              Enter a public certificate ID to open the project&apos;s verification record.
+            <h2 className="mb-2 text-2xl font-bold text-white">
+              {isDashboard ? "Open Verification Record" : "Lookup Public Record"}
+            </h2>
+            <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
+              {isDashboard
+                ? "Paste a certificate ID from your saved projects to open its verification view inside the dashboard."
+                : "Paste a public certificate ID to open the main proof page for one saved project."}
             </p>
 
-            <VerifySearchForm />
+            <VerifySearchFormInner recordBasePath={recordBasePath} />
 
-            <div className="mt-6 flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <div className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <Lock className="h-3.5 w-3.5" />
-              <span>Public-safe lookup only. Private account data stays hidden.</span>
+              <span>
+                {isDashboard
+                  ? "Saved certificate lookup only. The verification page opens in your workspace."
+                  : "Public-safe lookup only. Private account data stays hidden."}
+              </span>
             </div>
           </div>
         </section>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1">
-          {verificationSignals.map((signal) => (
+          {(isDashboard ? verificationSignals.slice(0, 2) : verificationSignals).map((signal) => (
             <article
               key={signal.title}
-              className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-surface/40 p-6 shadow-lg backdrop-blur-xl transition-all duration-300 hover:border-accent/40"
+              className="group relative overflow-hidden rounded-[1.7rem] border border-white/10 bg-surface/40 p-5 shadow-lg backdrop-blur-xl transition-all duration-300 hover:border-accent/40"
             >
               <div className="absolute -right-4 -top-4 p-4 opacity-5 transition-all duration-500 group-hover:opacity-10">
                 <ShieldCheck className="h-28 w-28 text-accent" />
@@ -160,27 +177,39 @@ export default function VerifyIndexClient() {
             </article>
           ))}
         </div>
+
+        <VerificationStatusLegend compact />
       </div>
 
-      <div className="space-y-8 lg:col-span-7">
-        <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-surface/40 p-8 shadow-2xl backdrop-blur-xl">
+      <div className="space-y-6 lg:col-span-7">
+        <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-surface/40 p-5 shadow-2xl backdrop-blur-xl sm:p-6 lg:p-7">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(52,211,153,0.12),transparent_28%),radial-gradient(circle_at_20%_80%,rgba(59,130,246,0.12),transparent_26%)]" />
           <div className="relative z-10">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-4 py-2 text-sm font-medium text-accent backdrop-blur-md">
               <Sparkles className="h-4 w-4" />
-              Recruiter-ready proof layer
+              {isDashboard ? "Saved proof workspace" : "Recruiter-ready proof layer"}
             </div>
 
             <h2 className="max-w-3xl text-3xl font-bold tracking-tight text-white sm:text-4xl">
-              This is where saved proof becomes easy to trust.
+              {isDashboard
+                ? "Review saved verification records without leaving your dashboard."
+                : "This is where saved proof becomes easy to trust."}
             </h2>
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
-              Instead of rerunning live analysis every time, the verification experience loads a stable
-              public record with saved scores, evidence summaries, and per-project certificate status.
+              {isDashboard
+                ? "Use this area to jump into any issued project certificate, inspect its proof state, and confirm whether it is verified, pending, or failed."
+                : "Instead of rerunning live analysis every time, this page opens a stable saved record with one project&apos;s scores, evidence summary, and certificate status."}
             </p>
 
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
-              {recruiterChecks.map((item) => (
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              {(isDashboard
+                ? [
+                    "Open one saved certificate by ID",
+                    "Stay inside the dashboard while reviewing proof",
+                    "Check verification state before sharing it",
+                  ]
+                : recruiterChecks
+              ).map((item) => (
                 <div
                   key={item}
                   className="rounded-[1.5rem] border border-white/10 bg-background/45 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
@@ -196,39 +225,46 @@ export default function VerifyIndexClient() {
         </section>
 
         {loadError ? (
-          <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-            {loadError}
-          </p>
+          <StatePanel
+            variant="error"
+            title="Could not load public certificates"
+            message={loadError}
+          />
         ) : null}
 
-        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <section className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+                {isDashboard ? "Recent Verification Records" : "Recent Public Records"}
+              </p>
+              <h3 className="text-2xl font-semibold tracking-tight text-white">
+                {isDashboard ? "Recently saved certificates" : "Recently issued certificates"}
+              </h3>
+            </div>
+            <p className="max-w-md text-sm leading-relaxed text-muted">
+              {isDashboard
+                ? "Open any saved certificate below to inspect its proof and current verification state."
+                : "Open any record below to inspect its saved proof and verification status."}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {isLoading ? (
-            Array.from({ length: 4 }).map((_, index) => (
-              <div
-                key={index}
-                className="overflow-hidden rounded-[2rem] border border-white/10 bg-surface/40 p-6 shadow-lg backdrop-blur-xl"
-              >
-                <div className="animate-pulse space-y-4">
-                  <div className="h-4 w-24 rounded-full bg-white/10" />
-                  <div className="h-8 w-3/4 rounded-2xl bg-white/10" />
-                  <div className="h-16 rounded-2xl bg-white/8" />
-                  <div className="h-4 w-32 rounded-full bg-white/10" />
-                </div>
-              </div>
-            ))
+            <SectionSkeleton cards={4} className="sm:col-span-2" />
           ) : certificates.length ? (
             certificates.map((certificate) => (
-              <Link
-                key={certificate.id}
-                href={`/verify/${encodeURIComponent(certificate.id)}`}
-                className="group relative block overflow-hidden rounded-[2rem] border border-white/10 bg-surface/40 p-6 shadow-lg backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-2xl"
+                <Link
+                  key={certificate.id}
+                href={`${recordBasePath}/${encodeURIComponent(certificate.id)}`}
+                className="group relative block overflow-hidden rounded-[1.7rem] border border-white/10 bg-surface/40 p-5 shadow-lg backdrop-blur-xl transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-2xl"
               >
                 <div className="absolute -right-8 -top-8 h-28 w-28 rounded-full bg-accent/8 blur-3xl transition-all duration-500 group-hover:bg-accent/15" />
                 <div className="relative z-10">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
                     {certificateTag(certificate)}
                   </p>
-                  <h3 className="mt-3 text-xl font-bold text-white">{certificate.id}</h3>
+                  <h3 className="mt-3 break-all text-lg font-bold text-white sm:text-xl">{certificate.id}</h3>
                   <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
                     Open the public record to inspect this project certificate and its saved verification data.
                   </p>
@@ -250,10 +286,25 @@ export default function VerifyIndexClient() {
               </Link>
             ))
           ) : (
-            <div className="rounded-[2rem] border border-white/10 bg-surface/40 p-6 text-sm text-muted-foreground shadow-lg backdrop-blur-xl sm:col-span-2">
-              No public project certificate records are available yet.
+            <div className="sm:col-span-2">
+              <EmptyStateCard
+                compact
+                title={
+                  isDashboard
+                    ? "No saved verification records yet"
+                    : "No public certificate records yet"
+                }
+                message={
+                  isDashboard
+                    ? "Once a project certificate is issued, it will appear here for dashboard lookup."
+                    : "Once a project certificate is issued, it will appear here for public lookup."
+                }
+                actionHref="/dashboard/submit"
+                actionLabel="Analyze a repository"
+              />
             </div>
           )}
+          </div>
         </section>
       </div>
     </div>

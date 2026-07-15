@@ -1,10 +1,14 @@
 const express = require("express");
 const { analyzeRepository } = require("../services/repo-analyzer.service");
 const {
-  extractGitHubUsername,
+  extractGitHubIdentity,
   resolveAuthenticatedUser,
 } = require("../services/auth-context.service");
-const { parseGitHubRepoUrl } = require("../services/github.service");
+const {
+  fetchRepositoryContributors,
+  fetchRepositoryMetadata,
+  parseGitHubRepoUrl,
+} = require("../services/github.service");
 const {
   createAnalysisJob,
   createProjectRecord,
@@ -220,6 +224,16 @@ router.post("/preview", async (req, res) => {
   }
 
   try {
+    const repoMetadata = await fetchRepositoryMetadata(repoUrl);
+
+    if (repoMetadata.private) {
+      return res.status(403).json({
+        success: false,
+        message:
+          "Analyze public repo only accepts public GitHub repositories. Private repositories cannot be analyzed in this mode.",
+      });
+    }
+
     const analysis = await analyzeRepository(repoUrl, branch);
 
     return res.status(200).json({
@@ -264,8 +278,10 @@ router.post("/", async (req, res) => {
     }
 
     const parsedRepo = parseGitHubRepoUrl(repoUrl);
-    const repoOwner = parsedRepo.owner.toLowerCase();
-    const githubUsername = extractGitHubUsername(user)?.toLowerCase() || null;
+    const githubIdentity = extractGitHubIdentity(user);
+    const githubUsername = githubIdentity.username?.toLowerCase() || null;
+    const repoMetadata = await fetchRepositoryMetadata(repoUrl);
+    const repoOwner = (repoMetadata.owner.login || parsedRepo.owner).toLowerCase();
 
     if (!githubUsername) {
       return res.status(403).json({
@@ -275,10 +291,36 @@ router.post("/", async (req, res) => {
       });
     }
 
-    if (githubUsername !== repoOwner) {
+    if (repoMetadata.private) {
       return res.status(403).json({
         success: false,
-        message: `This repository belongs to GitHub owner '${parsedRepo.owner}', but your signed-in GitHub account is '${githubUsername}'. Use 'Analyze public repo only' for third-party repositories, or sign in with the matching GitHub account to add it to your profile.`,
+        message:
+          "Private repositories cannot be added to a public SkillChain profile. Make the repository public or use a public repository instead.",
+      });
+    }
+
+    const contributorLogins = await fetchRepositoryContributors(repoUrl);
+    const isRepoOwner = githubUsername === repoOwner;
+    const isContributor = contributorLogins.includes(githubUsername);
+
+    if (!isRepoOwner && !isContributor) {
+      return res.status(403).json({
+        success: false,
+        message: `This repository is owned by '${parsedRepo.owner}', and your signed-in GitHub account '${githubUsername}' was not detected as the owner or a listed contributor. Use 'Analyze public repo only' for third-party repositories, or sign in with the GitHub account that owns or contributes to this repository.`,
+      });
+    }
+
+    if (
+      isRepoOwner &&
+      githubIdentity.githubUserId &&
+      repoMetadata.owner.id &&
+      githubIdentity.githubUserId !== repoMetadata.owner.id
+    ) {
+      console.warn("[SkillChain] GitHub owner username matched but owner id differed", {
+        repoOwner,
+        repoOwnerId: repoMetadata.owner.id,
+        githubUsername,
+        githubUserId: githubIdentity.githubUserId,
       });
     }
 
@@ -319,8 +361,14 @@ router.post("/", async (req, res) => {
       error_message: null,
     });
 
+    let finalizedCertificate = null;
     if (certificateId) {
-      await finalizeCertificateVerification(certificateId);
+      try {
+        finalizedCertificate = await finalizeCertificateVerification(certificateId);
+      } catch (_verificationError) {
+        // Keep the project analysis successful even if the verification step fails.
+        // The certificate record can still surface a failed verification state later.
+      }
     }
 
     const storedProject = await fetchProjectById(project.id, user.id);
@@ -330,6 +378,7 @@ router.post("/", async (req, res) => {
       message: "Repository analyzed and stored in Supabase.",
       data: {
         project: storedProject,
+        certificate: finalizedCertificate,
         analysis,
       },
     });

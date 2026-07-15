@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { User, Mail, Lock, ShieldCheck, Sparkles, Zap, ArrowRight, GitBranch, Terminal, Award, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import BackButton from "@/components/BackButton";
 import LiquidEther from "@/components/LiquidEther";
+import StatePanel from "@/components/StatePanel";
 import { createClient } from "@/utils/supabase/client";
 
 function getAuthErrorMessage(error: unknown) {
@@ -368,7 +369,7 @@ export default function LoginPage() {
                   </div>
                   <div>
                     <p className="text-xs font-medium leading-relaxed text-white/90 italic">
-                      "SkillChain completely changed how I hire. Seeing verified proof of a developer's specific commits gives me absolute confidence."
+                      &ldquo;SkillChain completely changed how I hire. Seeing verified proof of a developer&apos;s specific commits gives me absolute confidence.&rdquo;
                     </p>
                     <p className="mt-2 text-xs font-semibold text-emerald-400">— Sarah J., Engineering Leader</p>
                   </div>
@@ -387,8 +388,8 @@ export default function LoginPage() {
                 </h2>
                 <p className="mt-1.5 text-sm text-muted">
                   {authMode === "signin" 
-                    ? "Enter your credentials to access your dashboard." 
-                    : "Fill in the details below to get started."}
+                    ? "Sign in to open your saved projects, certificates, and profile." 
+                    : "Create an account to start saving analyzed repositories to your SkillChain profile."}
                 </p>
               </div>
 
@@ -521,23 +522,29 @@ export default function LoginPage() {
                 </AnimatePresence>
 
                 {errorMessage && (
-                  <motion.p
+                  <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-2.5 text-sm text-red-400"
                   >
-                    {errorMessage}
-                  </motion.p>
+                    <StatePanel
+                      variant="error"
+                      title="Authentication failed"
+                      message={errorMessage}
+                    />
+                  </motion.div>
                 )}
 
                 {message && (
-                  <motion.p
+                  <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="rounded-xl border border-accent/20 bg-accent/10 px-4 py-2.5 text-sm text-accent"
                   >
-                    {message}
-                  </motion.p>
+                    <StatePanel
+                      variant="success"
+                      title="Account created"
+                      message={message}
+                    />
+                  </motion.div>
                 )}
 
                 <button

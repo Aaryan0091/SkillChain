@@ -4,21 +4,24 @@ import Link from "next/link";
 import { useEffect, useState, startTransition } from "react";
 import {
   ArrowUpRight,
-  Award,
-  BarChart3,
   CheckCircle2,
   Clock3,
   Code2,
   GitBranch,
-  Layers3,
   Radar,
   Trash2,
-  ScanSearch,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
+import ConfirmModal from "@/components/ConfirmModal";
+import EmptyStateCard from "@/components/EmptyStateCard";
+import StatePanel from "@/components/StatePanel";
+import { formatRelativeDate, formatShortDate } from "@/lib/formatting";
+import { statusTone } from "@/lib/status";
 import { createClient } from "@/utils/supabase/client";
 import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
+import { resolveCertificateVerification } from "@/lib/certificate-verification";
+import type { ProjectRecord as DashboardProjectRecord } from "@/lib/dashboard-data";
 
 type MetricRecord = {
   files: number | null;
@@ -75,39 +78,9 @@ type ProjectRecord = {
   analysis_jobs?: AnalysisJobRecord[];
 };
 
-function formatRelativeDate(value: string | null) {
-  if (!value) return "No activity yet";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unknown time";
-
-  const diffMs = Date.now() - date.getTime();
-  const diffHours = Math.max(0, Math.round(diffMs / (1000 * 60 * 60)));
-
-  if (diffHours < 1) return "Updated just now";
-  if (diffHours < 24) return `Updated ${diffHours}h ago`;
-
-  const diffDays = Math.round(diffHours / 24);
-  if (diffDays < 7) return `Updated ${diffDays}d ago`;
-
-  return `Updated ${date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  })}`;
-}
-
-function formatDate(value: string | null) {
-  if (!value) return "Unknown";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Unknown";
-
-  return date.toLocaleDateString(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
+type DashboardClientProps = {
+  initialProjects?: DashboardProjectRecord[];
+};
 
 function repoLabel(project: ProjectRecord) {
   if (project.repo_name?.trim()) return project.repo_name;
@@ -133,54 +106,12 @@ function projectStatusLabel(project: ProjectRecord) {
   }
 }
 
-function statusTone(status: string) {
-  switch (status) {
-    case "Stable":
-      return "border-emerald-400/20 bg-emerald-400/10 text-emerald-300";
-    case "Ready for cert":
-    case "Certificate ready":
-      return "border-amber-400/20 bg-amber-400/10 text-amber-300";
-    case "Analyzing":
-      return "border-sky-400/20 bg-sky-400/10 text-sky-300";
-    case "Needs retry":
-      return "border-red-400/20 bg-red-400/10 text-red-300";
-    default:
-      return "border-white/10 bg-white/5 text-muted";
-  }
-}
-
-function average(values: Array<number | null | undefined>) {
-  const valid = values.filter((value): value is number => typeof value === "number");
-  if (!valid.length) return null;
-  return Math.round(valid.reduce((sum, value) => sum + value, 0) / valid.length);
-}
-
-function gradeFromScore(score: number | null) {
-  if (score === null) return "Pending";
-  if (score >= 90) return "A";
-  if (score >= 80) return "A-";
-  if (score >= 70) return "B+";
-  if (score >= 60) return "B";
-  return "C";
-}
-
-function firstMetric(project: ProjectRecord) {
-  return project.metrics?.[0] ?? null;
-}
-
 function firstScore(project: ProjectRecord) {
   return project.scores?.[0] ?? null;
 }
 
-function latestJob(project: ProjectRecord) {
-  return project.analysis_jobs?.[0] ?? null;
-}
-
 function certificateVerificationState(certificate: CertificateRecord) {
-  if (certificate.verification_status === "verified") return "Verified";
-  if (certificate.verification_status === "failed") return "Failed";
-  if (certificate.status === "failed") return "Failed";
-  return "Pending";
+  return resolveCertificateVerification(certificate).badgeLabel;
 }
 
 async function fetchProjectsClient() {
@@ -233,12 +164,21 @@ async function deleteProjectClient(projectId: string) {
   }
 }
 
-export default function DashboardClient() {
-  const [projects, setProjects] = useState<ProjectRecord[]>([]);
+export default function DashboardClient({
+  initialProjects = [],
+}: DashboardClientProps) {
+  const hasInitialProjects = initialProjects.length > 0;
+  const [projects, setProjects] = useState<ProjectRecord[]>(
+    initialProjects as ProjectRecord[]
+  );
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [removingProjectId, setRemovingProjectId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingRemoval, setPendingRemoval] = useState<{
+    projectId: string;
+    repo: string;
+  } | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -255,7 +195,9 @@ export default function DashboardClient() {
       .catch((error) => {
         if (!isActive) return;
         startTransition(() => {
-          setProjects([]);
+          if (!hasInitialProjects) {
+            setProjects([]);
+          }
           setLoadError(
             error instanceof Error
               ? error.message
@@ -268,18 +210,13 @@ export default function DashboardClient() {
     return () => {
       isActive = false;
     };
-  }, []);
+  }, [hasInitialProjects]);
 
   const focusProject = projects[0] ?? null;
   const focusScore = focusProject ? firstScore(focusProject) : null;
-  const focusMetric = focusProject ? firstMetric(focusProject) : null;
-  const focusJob = focusProject ? latestJob(focusProject) : null;
 
   const completedProjects = projects.filter(
     (project) => project.analysis_status === "completed"
-  ).length;
-  const activeQueue = projects.filter((project) =>
-    project.analysis_jobs?.some((job) => job.status === "running")
   ).length;
   const mintedCertificates = projects.reduce(
     (count, project) => count + (project.certificates?.length || 0),
@@ -318,14 +255,14 @@ export default function DashboardClient() {
       accent: "from-amber-400/35 to-transparent",
     },
     {
-      label: "Active queue",
-      value: isLoading ? "..." : String(activeQueue),
+      label: "Verified certificates",
+      value: isLoading ? "..." : String(verifiedCertificates),
       detail:
-        activeQueue > 0
-          ? `${activeQueue} scan in progress`
+        verifiedCertificates > 0
+          ? `${mintedCertificates - verifiedCertificates} still pending/failed`
           : isLoading
-            ? "Checking queue"
-            : "No active scans",
+            ? "Checking verification"
+            : "No fully verified certificates yet",
       accent: "from-sky-400/35 to-transparent",
     },
   ];
@@ -352,6 +289,7 @@ export default function DashboardClient() {
       branch: project.default_branch || "default",
       status: projectStatusLabel(project),
       score: score ? score.confidence_score : null,
+      certificateId: project.certificates?.[0]?.id || null,
       summary:
         score?.explanation ||
         project.analysis_error ||
@@ -360,13 +298,6 @@ export default function DashboardClient() {
   });
 
   async function removeProject(projectId: string) {
-    const confirmed =
-      typeof window === "undefined"
-        ? true
-        : window.confirm("Remove this saved repository from your dashboard?");
-
-    if (!confirmed) return;
-
     setRemovingProjectId(projectId);
     setActionError(null);
 
@@ -377,6 +308,7 @@ export default function DashboardClient() {
           currentProjects.filter((project) => project.id !== projectId)
         );
         setRemovingProjectId(null);
+        setPendingRemoval(null);
       });
     } catch (error) {
       setRemovingProjectId(null);
@@ -386,30 +318,6 @@ export default function DashboardClient() {
     }
   }
 
-  const queue = focusProject?.analysis_jobs?.length
-    ? focusProject.analysis_jobs.map((job) => ({
-        step: job.job_type.replace(/_/g, " "),
-        state: job.status,
-        note:
-          job.error_message ||
-          (job.status === "completed"
-            ? "The saved project analysis finished successfully."
-            : job.status === "running"
-              ? "Analysis is still running for this repository."
-              : "This job is waiting for the next processing step."),
-      }))
-    : [
-        {
-          step: "repository analysis",
-          state: projects.length ? "Waiting" : isLoading ? "Loading" : "No jobs yet",
-          note: projects.length
-            ? "This project has no visible job history yet."
-            : isLoading
-              ? "Loading saved analysis jobs."
-              : "Analyze a repository to populate the queue state.",
-        },
-      ];
-
   const recentCertificates = projects
     .flatMap((project) =>
       (project.certificates || []).map((certificate) => ({
@@ -418,20 +326,31 @@ export default function DashboardClient() {
         repo: repoLabel(project),
         status:
           certificateVerificationState(certificate),
-        issuedAt: formatDate(certificate.created_at),
+        issuedAt: formatShortDate(certificate.created_at),
       }))
     )
     .slice(0, 3);
 
-  const architectureAverage = average(
-    projects.map((project) => firstScore(project)?.architecture_score)
-  );
-  const confidenceAverage = average(
-    projects.map((project) => firstScore(project)?.confidence_score)
-  );
-
   return (
     <main className="w-full px-4 pb-12 pt-4 sm:px-6 sm:pb-14 lg:px-8 lg:pb-16">
+      <ConfirmModal
+        open={Boolean(pendingRemoval)}
+        title="Remove this saved repository?"
+        description={
+          pendingRemoval
+            ? `This will remove ${pendingRemoval.repo} from your dashboard and recent repository reads.`
+            : ""
+        }
+        detail="Its linked saved metrics, scores, jobs, and certificate records will also be deleted."
+        confirmLabel="Yes, remove it"
+        busy={Boolean(removingProjectId)}
+        onCancel={() => setPendingRemoval(null)}
+        onConfirm={() => {
+          if (pendingRemoval) {
+            void removeProject(pendingRemoval.projectId);
+          }
+        }}
+      />
       <section className="relative overflow-hidden rounded-[2.5rem] border border-border/70 bg-surface/50 shadow-[0_24px_70px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(52,211,153,0.16),transparent_34%),radial-gradient(circle_at_82%_18%,rgba(245,158,11,0.16),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.03),transparent_58%)]" />
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent" />
@@ -455,15 +374,17 @@ export default function DashboardClient() {
 
             <div className="max-w-3xl space-y-4">
               <h1 className="text-3xl font-semibold tracking-tight text-white sm:text-4xl lg:text-5xl">
-                Your repo intelligence, arranged like a real control room.
+                Your saved project summary, in one place.
               </h1>
               <p className="max-w-2xl text-base leading-relaxed text-muted">
-                Track which repositories already have project certificates, what still needs stronger evidence, and where the current scan queue is spending its time.
+                Use this page to scan recent project records quickly. Open a project when you want the full analysis, certificate, or public verification record.
               </p>
               {loadError ? (
-                <p className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                  {loadError}
-                </p>
+                <StatePanel
+                  variant="error"
+                  title="Could not refresh dashboard data"
+                  message={loadError}
+                />
               ) : null}
             </div>
 
@@ -492,7 +413,7 @@ export default function DashboardClient() {
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">
-                  Focus repo
+                  Focus project
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white">
                   {focusProject ? repoLabel(focusProject) : isLoading ? "Loading..." : "No project yet"}
@@ -507,7 +428,13 @@ export default function DashboardClient() {
                   </Link>
                 ) : null}
               </div>
-              <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${statusTone(focusProject ? projectStatusLabel(focusProject) : "Queued")}`}>
+              <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${statusTone(focusProject ? projectStatusLabel(focusProject) : "Queued", {
+                Stable: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+                "Ready for cert": "border-amber-400/20 bg-amber-400/10 text-amber-300",
+                "Certificate ready": "border-amber-400/20 bg-amber-400/10 text-amber-300",
+                Analyzing: "border-sky-400/20 bg-sky-400/10 text-sky-300",
+                "Needs retry": "border-red-400/20 bg-red-400/10 text-red-300",
+              })}`}>
                 <Clock3 className="h-3.5 w-3.5" />
                 {focusProject ? projectStatusLabel(focusProject) : isLoading ? "Loading" : "Waiting"}
               </span>
@@ -517,7 +444,7 @@ export default function DashboardClient() {
               <div className="rounded-[1.5rem] border border-white/8 bg-surface/35 p-4">
                 <div className="flex items-center gap-2 text-sm font-semibold text-white">
                   <Radar className="h-4 w-4 text-accent" />
-                  Evidence bands
+                  Saved score bands
                 </div>
                 <div className="mt-4 space-y-3">
                   {capabilityBands.map((band) => (
@@ -540,17 +467,31 @@ export default function DashboardClient() {
               <div className="rounded-[1.5rem] border border-white/8 bg-surface/35 p-4">
                 <div className="flex items-center gap-2 text-sm font-semibold text-white">
                   <ShieldCheck className="h-4 w-4 text-amber-300" />
-                  Scan note
+                  Project note
                 </div>
                 <p className="mt-3 text-sm leading-relaxed text-muted">
-                  {focusJob?.error_message ||
-                    focusScore?.explanation ||
-                    focusMetric?.raw_metrics_json?.summary ||
+                  {focusScore?.explanation ||
                     focusProject?.analysis_error ||
                     (isLoading
-                      ? "Loading saved score summary..."
-                      : "Analyze a repository to populate the saved score summary here.")}
+                      ? "Loading saved project summary..."
+                      : "Analyze a repository to populate the saved project summary here.")}
                 </p>
+                {focusProject?.certificates?.[0] ? (
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <Link
+                      href={`/dashboard/certificates/${focusProject.certificates[0].id}`}
+                      className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-white/10"
+                    >
+                      Open project certificate
+                    </Link>
+                    <Link
+                      href={`/dashboard/verify/${focusProject.certificates[0].id}`}
+                      className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent transition-colors hover:bg-accent/15"
+                    >
+                      Open public verify
+                    </Link>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -570,7 +511,7 @@ export default function DashboardClient() {
                 </h2>
               </div>
               <Link
-                href="/submit"
+                href="/dashboard/submit"
                 className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/10"
               >
                 Analyze new repo
@@ -579,8 +520,12 @@ export default function DashboardClient() {
             </div>
 
             {actionError ? (
-              <div className="border-t border-border/50 px-6 py-4 text-sm text-red-300">
-                {actionError}
+              <div className="border-t border-border/50 px-6 py-4">
+                <StatePanel
+                  variant="error"
+                  title="Project action failed"
+                  message={actionError}
+                />
               </div>
             ) : null}
 
@@ -604,13 +549,26 @@ export default function DashboardClient() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => removeProject(project.id)}
+                          onClick={() =>
+                            setPendingRemoval({
+                              projectId: project.id,
+                              repo: project.repo,
+                            })
+                          }
                           disabled={removingProjectId === project.id}
                           className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-red-400/20 bg-red-400/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-red-200 transition-colors hover:bg-red-400/15 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                           {removingProjectId === project.id ? "Removing..." : "Remove"}
                         </button>
+                        {project.certificateId ? (
+                          <Link
+                            href={`/dashboard/certificates/${project.certificateId}`}
+                            className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-white transition-colors hover:bg-white/10"
+                          >
+                            Project certificate
+                          </Link>
+                        ) : null}
                       </div>
                       <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">
                         {project.summary}
@@ -619,7 +577,13 @@ export default function DashboardClient() {
 
                     <div className="flex items-center">
                       <span
-                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${statusTone(project.status)}`}
+                        className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${statusTone(project.status, {
+                          Stable: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+                          "Ready for cert": "border-amber-400/20 bg-amber-400/10 text-amber-300",
+                          "Certificate ready": "border-amber-400/20 bg-amber-400/10 text-amber-300",
+                          Analyzing: "border-sky-400/20 bg-sky-400/10 text-sky-300",
+                          "Needs retry": "border-red-400/20 bg-red-400/10 text-red-300",
+                        })}`}
                       >
                         <span className="h-1.5 w-1.5 rounded-full bg-current" />
                         {project.status}
@@ -649,73 +613,23 @@ export default function DashboardClient() {
                   </article>
                 ))
               ) : (
-                <div className="px-6 py-8 text-sm text-muted">
-                  {isLoading
-                    ? "Loading saved projects..."
-                    : "No saved projects yet. Run your first repository analysis to populate the dashboard."}
+                <div className="px-6 py-8">
+                  <EmptyStateCard
+                    compact
+                    title={isLoading ? "Loading saved projects" : "No saved projects yet"}
+                    message={
+                      isLoading
+                        ? "We are fetching your latest saved repository records."
+                        : "Run your first repository analysis to populate this summary page."
+                    }
+                    actionHref={isLoading ? undefined : "/dashboard/submit"}
+                    actionLabel={isLoading ? undefined : "Analyze a repository"}
+                  />
                 </div>
               )}
             </div>
           </section>
 
-          <section className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-            <div className="rounded-[2rem] border border-border/70 bg-surface/40 p-6 shadow-sm backdrop-blur-xl">
-              <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                <ScanSearch className="h-4 w-4 text-accent" />
-                Queue state
-              </div>
-              <div className="mt-5 space-y-4">
-                {queue.map((item) => (
-                  <div key={`${item.step}-${item.state}`} className="rounded-[1.35rem] border border-white/8 bg-background/40 p-4">
-                    <div className="flex items-center justify-between gap-4">
-                      <p className="font-medium capitalize text-white">{item.step}</p>
-                      <span className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-                        {item.state}
-                      </span>
-                    </div>
-                    <p className="mt-2 text-sm leading-relaxed text-muted">{item.note}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-[2rem] border border-border/70 bg-surface/40 p-6 shadow-sm backdrop-blur-xl">
-              <div className="flex items-center gap-2 text-sm font-semibold text-white">
-                <BarChart3 className="h-4 w-4 text-amber-300" />
-                Recruiter-facing posture
-              </div>
-              <div className="mt-5 grid gap-4 sm:grid-cols-2">
-                <div className="rounded-[1.4rem] border border-white/8 bg-background/40 p-4">
-                  <div className="flex items-center gap-2 text-sm font-medium text-white">
-                    <Layers3 className="h-4 w-4 text-accent" />
-                    Architecture consistency
-                  </div>
-                  <p className="mt-3 text-3xl font-semibold tracking-tight text-white">
-                    {gradeFromScore(architectureAverage)}
-                  </p>
-                  <p className="mt-2 text-sm leading-relaxed text-muted">
-                    {architectureAverage !== null
-                      ? `Average architecture score across saved projects is ${architectureAverage}, giving recruiters a clearer picture of system design consistency.`
-                      : "Architecture scoring will appear here once projects are analyzed and saved."}
-                  </p>
-                </div>
-                <div className="rounded-[1.4rem] border border-white/8 bg-background/40 p-4">
-                  <div className="flex items-center gap-2 text-sm font-medium text-white">
-                    <Award className="h-4 w-4 text-amber-300" />
-                    Verification readiness
-                  </div>
-                  <p className="mt-3 text-3xl font-semibold tracking-tight text-white">
-                    {confidenceAverage !== null ? `${confidenceAverage}%` : "0%"}
-                  </p>
-                  <p className="mt-2 text-sm leading-relaxed text-muted">
-                    {confidenceAverage !== null
-                      ? "This reflects how ready your saved projects are for recruiter-facing proof and public verification."
-                      : "Run an analysis to start building a recruiter-facing readiness score."}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
         </div>
 
         <aside className="space-y-8">
@@ -754,8 +668,11 @@ export default function DashboardClient() {
           <section className="rounded-[2rem] border border-border/70 bg-surface/40 p-6 shadow-sm backdrop-blur-xl">
             <div className="flex items-center gap-2 text-sm font-semibold text-white">
               <Code2 className="h-4 w-4 text-amber-300" />
-              Recent project certificates
+              Certificate archive
             </div>
+            <p className="mt-3 text-sm leading-relaxed text-muted">
+              Certificates belong to projects first. Use this area as a quick archive when you already know which issued proof you want to open.
+            </p>
             <div className="mt-5 space-y-4">
               {recentCertificates.length ? (
                 recentCertificates.map((certificate) => (
@@ -792,6 +709,13 @@ export default function DashboardClient() {
                 </div>
               )}
             </div>
+            <Link
+              href="/dashboard/certificates"
+              className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-accent transition-colors hover:text-accent/80"
+            >
+              Open full certificate archive
+              <ArrowUpRight className="h-4 w-4" />
+            </Link>
           </section>
         </aside>
       </section>

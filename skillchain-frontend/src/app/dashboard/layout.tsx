@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import BackButton from "@/components/BackButton";
 import { createClient } from "@/utils/supabase/client";
@@ -13,19 +13,82 @@ function displayIdentity(user: User | null) {
     user?.user_metadata?.name ||
     user?.email?.split("@")[0] ||
     "Developer";
+  const githubUsername =
+    user?.user_metadata?.user_name ||
+    user?.user_metadata?.preferred_username ||
+    user?.user_metadata?.username ||
+    user?.user_metadata?.login ||
+    null;
 
   return {
     displayName,
     displayEmail: user?.email || "dev@skillchain.ai",
     avatarLetter: displayName.charAt(0).toUpperCase() || "D",
+    githubUsername:
+      typeof githubUsername === "string" && githubUsername.trim().length > 0
+        ? githubUsername.trim()
+        : null,
   };
 }
+
+const dashboardNavItems = [
+  {
+    href: "/dashboard",
+    label: "Overview",
+    match: (pathname: string) => pathname === "/dashboard",
+    icon: (
+      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+    ),
+  },
+  {
+    href: "/dashboard/submit",
+    label: "Submit Repo",
+    match: (pathname: string) =>
+      pathname.startsWith("/dashboard/submit") || pathname.startsWith("/submit"),
+    icon: (
+      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
+    ),
+  },
+  {
+    href: "/dashboard/projects",
+    label: "Projects",
+    match: (pathname: string) => pathname.startsWith("/dashboard/projects"),
+    icon: (
+      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7h6l2 2h10v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7a2 2 0 012-2h4l2 2"/></svg>
+    ),
+  },
+  {
+    href: "/dashboard/certificates",
+    label: "Certificates",
+    match: (pathname: string) => pathname.startsWith("/dashboard/certificates"),
+    icon: (
+      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+    ),
+  },
+  {
+    href: "/dashboard/verify",
+    label: "Verify",
+    match: (pathname: string) => pathname.startsWith("/dashboard/verify"),
+    icon: (
+      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3l7 4v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V7l7-4z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.5 12.5l1.5 1.5 3.5-4"/></svg>
+    ),
+  },
+  {
+    href: "/dashboard/settings",
+    label: "Settings",
+    match: (pathname: string) => pathname.startsWith("/dashboard/settings"),
+    icon: (
+      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8.5A3.5 3.5 0 1112 15.5A3.5 3.5 0 0112 8.5z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1.04 1.56V21a2 2 0 11-4 0v-.09A1.7 1.7 0 008.96 19.35a1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87A1.7 1.7 0 003 13.96H2.91a2 2 0 110-4H3a1.7 1.7 0 001.56-1.04 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 112.83-2.83l.06.06a1.7 1.7 0 001.87.34H9A1.7 1.7 0 0010.04 3H10.13a2 2 0 114 0H14a1.7 1.7 0 001.04 1.56 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87V9A1.7 1.7 0 0021 10.04h.09a2 2 0 110 4H21A1.7 1.7 0 0019.44 15z"/></svg>
+    ),
+  },
+];
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -90,7 +153,24 @@ export default function DashboardLayout({
     return () => window.removeEventListener("keydown", handleEscape);
   }, [isMenuOpen]);
 
-  const { displayName, displayEmail, avatarLetter } = displayIdentity(user);
+  const { displayName, displayEmail, avatarLetter, githubUsername } = displayIdentity(user);
+  const activePath =
+    pathname || (typeof window !== "undefined" ? window.location.pathname : "");
+  const isProfileActive = activePath.startsWith("/dashboard/profile");
+  const isOverviewPage = activePath === "/dashboard";
+  const isVerifyRecordPage =
+    activePath.startsWith("/dashboard/verify/") &&
+    activePath !== "/dashboard/verify";
+  const backHref = isOverviewPage
+    ? "/"
+    : isVerifyRecordPage
+      ? "/dashboard/verify"
+      : "/dashboard";
+  const backText = isOverviewPage
+    ? "Back to Home"
+    : isVerifyRecordPage
+      ? "Back to Verify"
+      : "Back to Overview";
 
   const handleSignOut = async () => {
     const supabase = createClient();
@@ -108,36 +188,47 @@ export default function DashboardLayout({
           </Link>
         </div>
         <nav className="flex-1 space-y-2 p-4">
-          <Link
-            href="/dashboard"
-            className="flex items-center gap-3 rounded-xl bg-accent/10 px-3 py-3 text-sm font-semibold text-accent shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)] transition-all lg:px-4"
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-            Overview
-          </Link>
-          <Link
-            href="/submit"
-            className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-muted transition-all hover:bg-surface-strong hover:text-foreground lg:px-4"
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/></svg>
-            Submit Repo
-          </Link>
-          <Link
-            href="/dashboard/certificates"
-            className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-medium text-muted transition-all hover:bg-surface-strong hover:text-foreground lg:px-4"
-          >
-            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
-            Certificates
-          </Link>
+          {dashboardNavItems.map((item) => {
+            const isActive = item.match(activePath);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-3 rounded-xl px-3 py-3 text-sm transition-all lg:px-4 ${
+                  isActive
+                    ? "bg-accent/10 font-semibold text-accent shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]"
+                    : "font-medium text-muted hover:bg-surface-strong hover:text-foreground"
+                }`}
+                aria-current={isActive ? "page" : undefined}
+              >
+                {item.icon}
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
         <div className="border-t border-border/50 p-4">
-          <Link href="/dashboard/profile" className="flex cursor-pointer items-center gap-3 rounded-2xl border border-border/30 bg-surface-strong/50 p-3 shadow-sm backdrop-blur transition-all hover:border-border hover:bg-surface-strong">
+          <Link
+            href="/dashboard/profile"
+            aria-current={isProfileActive ? "page" : undefined}
+            className={`flex cursor-pointer items-center gap-3 rounded-2xl border p-3 shadow-sm backdrop-blur transition-all ${
+              isProfileActive
+                ? "border-accent/25 bg-accent/10"
+                : "border-border/30 bg-surface-strong/50 hover:border-border hover:bg-surface-strong"
+            }`}
+          >
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-strong font-bold text-white shadow-inner">
               {avatarLetter}
             </div>
             <div className="flex-1 overflow-hidden">
               <p className="truncate text-sm font-semibold leading-tight">{displayName}</p>
               <p className="mt-0.5 truncate text-[11px] text-muted">{displayEmail}</p>
+              {githubUsername ? (
+                <p className="mt-1 truncate text-[11px] text-accent">
+                  GitHub: @{githubUsername}
+                </p>
+              ) : null}
             </div>
           </Link>
         </div>
@@ -177,26 +268,38 @@ export default function DashboardLayout({
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-white">{displayName}</p>
                       <p className="truncate text-xs text-muted">{displayEmail}</p>
+                      {githubUsername ? (
+                        <p className="mt-1 truncate text-[11px] text-accent">
+                          GitHub: @{githubUsername}
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 </div>
 
                 <nav className="space-y-1.5">
                   {[
-                    { href: "/dashboard", label: "Overview" },
-                    { href: "/submit", label: "Analyze Repo" },
-                    { href: "/dashboard/certificates", label: "Certificates" },
-                    { href: "/dashboard/profile", label: "Switch Profile" },
-                    { href: "/", label: "Back to Home" },
+                    ...dashboardNavItems.map((item) => ({
+                      href: item.href,
+                      label: item.href === "/submit" ? "Analyze Repo" : item.label,
+                      isActive: item.match(activePath),
+                    })),
+                    { href: "/dashboard/profile", label: "Switch Profile", isActive: activePath.startsWith("/dashboard/profile") },
+                    { href: "/", label: "Back to Home", isActive: false },
                   ].map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}
                       onClick={() => setIsMenuOpen(false)}
-                      className="flex items-center justify-between rounded-xl px-3 py-3 text-sm font-medium text-white transition-colors hover:bg-white/5"
+                      className={`flex items-center justify-between rounded-xl px-3 py-3 text-sm transition-colors ${
+                        item.isActive
+                          ? "bg-accent/10 font-semibold text-accent"
+                          : "font-medium text-white hover:bg-white/5"
+                      }`}
+                      aria-current={item.isActive ? "page" : undefined}
                     >
                       <span>{item.label}</span>
-                      <svg className="h-4 w-4 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+                      <svg className={`h-4 w-4 ${item.isActive ? "text-accent" : "text-muted"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
                     </Link>
                   ))}
                   <button
@@ -212,7 +315,7 @@ export default function DashboardLayout({
             </>
           ) : null}
           <div className="hidden px-4 pt-4 sm:px-6 md:block lg:px-8 lg:pt-6">
-            <BackButton href="/" text="Back to Home" />
+            <BackButton href={backHref} text={backText} />
           </div>
           {isCheckingAuth ? (
             <main className="w-full px-4 pb-12 pt-4 sm:px-6 sm:pb-14 lg:px-8 lg:pb-16">

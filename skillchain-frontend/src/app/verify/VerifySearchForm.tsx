@@ -5,6 +5,14 @@ import { FormEvent, useState } from "react";
 import { Activity, Search } from "lucide-react";
 
 export default function VerifySearchForm() {
+  return <VerifySearchFormInner />;
+}
+
+export function VerifySearchFormInner({
+  recordBasePath = "/verify",
+}: {
+  recordBasePath?: string;
+}) {
   const router = useRouter();
   const [query, setQuery] = useState("");
 
@@ -14,7 +22,7 @@ export default function VerifySearchForm() {
     const value = query.trim();
     if (!value) return;
 
-    router.push(`/verify/${encodeURIComponent(value)}`);
+    router.push(`${recordBasePath}/${encodeURIComponent(value)}`);
   };
 
   return (
@@ -43,7 +51,7 @@ export default function VerifySearchForm() {
       <div className="pt-2">
         <button
           type="submit"
-          className="group relative w-full overflow-hidden rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-6 py-4 text-sm font-bold text-emerald-400 transition-all hover:bg-emerald-500 hover:text-[#0f172a] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)]"
+          className="group relative w-full cursor-pointer overflow-hidden rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-6 py-4 text-sm font-bold text-emerald-400 transition-all hover:bg-emerald-500 hover:text-[#0f172a] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)]"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-accent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
           <span className="relative z-10 flex items-center justify-center gap-2">

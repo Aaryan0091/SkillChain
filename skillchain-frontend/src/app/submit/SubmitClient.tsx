@@ -8,6 +8,8 @@ import {
   BadgeCheck, Eye, ArrowRight
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import StatePanel from "@/components/StatePanel";
+import VerificationStatusLegend from "@/components/VerificationStatusLegend";
 import { getPublicEnv } from "@/lib/env";
 import { createClient } from "@/utils/supabase/client";
 
@@ -184,7 +186,7 @@ export default function SubmitClient() {
           Connect your <span className="text-transparent bg-clip-text bg-gradient-to-r from-accent to-emerald-400">GitHub</span>
         </h1>
         <p className="mt-2 max-w-2xl text-base text-muted-foreground sm:text-lg">
-          Submit your codebase for an AI-driven architectural deep dive. We extract verifiable skills directly from your commit history.
+          Submit one GitHub repository, score it, and choose whether to save that proof to your SkillChain profile or only inspect it as a public repo.
         </p>
       </motion.div>
 
@@ -195,41 +197,70 @@ export default function SubmitClient() {
         className="mt-6 grid grid-cols-1 gap-6 lg:mt-8 lg:grid-cols-12 lg:gap-8"
       >
         {/* Left Column - Submission Form */}
-        <div className="lg:col-span-5 space-y-8">
-          <motion.div variants={item} className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-surface/40 p-5 shadow-2xl backdrop-blur-xl sm:p-6 lg:p-8">
+        <div className="space-y-6 lg:col-span-6">
+          <motion.div variants={item} className="relative overflow-hidden rounded-[1.7rem] border border-white/10 bg-surface/40 p-4 shadow-2xl backdrop-blur-xl sm:p-5 lg:p-6">
             {/* Background Glow */}
             <div className="absolute -top-20 -right-20 w-64 h-64 bg-accent/20 rounded-full blur-[80px] pointer-events-none" />
             <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-emerald-500/10 rounded-full blur-[80px] pointer-events-none" />
             
             <div className="relative z-10">
-              <div className="h-12 w-12 rounded-2xl bg-white/5 flex items-center justify-center mb-6 border border-white/10 shadow-inner">
-                <GitBranch className="h-6 w-6 text-white" />
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[1.1rem] border border-white/10 bg-white/5 shadow-inner">
+                  <GitBranch className="h-5 w-5 text-white" />
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/75">
+                  {submitMode === "profile" ? "Profile-linked submission" : "Public-only submission"}
+                </div>
               </div>
               
-              <h2 className="text-2xl font-bold text-white mb-2">Link Repository</h2>
-              <p className="text-sm text-muted-foreground mb-8">
-                Choose whether to save the repository to your own profile or only analyze it as a public reference.
-              </p>
+              <div className="mb-4 max-w-2xl">
+                <h2 className="mb-1.5 text-xl font-bold text-white sm:text-2xl">Link Repository</h2>
+                <p className="text-sm leading-relaxed text-muted-foreground">
+                  Choose whether this repo becomes part of your saved profile or stays as a one-time public-only analysis.
+                </p>
+              </div>
 
-              <div className="mb-5 rounded-[1.35rem] border border-white/10 bg-background/35 p-2">
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="mb-3 flex flex-wrap gap-2">
+                <span className="rounded-full border border-[#a8f5e9]/20 bg-[#a8f5e9]/10 px-2.5 py-1 text-[10px] font-medium text-[#a8f5e9]">
+                  Saved proof for owned repos
+                </span>
+                <span className="rounded-full border border-sky-300/20 bg-sky-300/10 px-2.5 py-1 text-[10px] font-medium text-sky-200">
+                  Public analysis for any repo
+                </span>
+              </div>
+
+              <div className="mb-4 rounded-[1.35rem] border border-white/10 bg-background/35 p-3">
+                <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+                      Choose submission mode
+                    </p>
+                    <p className="mt-1 text-xs sm:text-sm text-white/70">
+                      Pick how this repository should be handled before analysis.
+                    </p>
+                  </div>
+                  <p className="text-xs text-white/45">
+                    You can switch this anytime before submitting
+                  </p>
+                </div>
+                <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
                   <button
                     type="button"
                     onClick={() => setSubmitMode("profile")}
-                    className={`group relative cursor-pointer overflow-hidden rounded-[1rem] border px-3 py-2.5 text-left transition-all duration-300 ${
+                    className={`group relative cursor-pointer overflow-hidden rounded-[1.15rem] border p-3.5 text-left transition-all duration-300 ${
                       submitMode === "profile"
-                        ? "border border-[#a8f5e9]/40 bg-[#a8f5e9]/10 text-white"
-                        : "border border-transparent bg-white/5 text-muted-foreground hover:bg-white/10"
+                        ? "border-[#a8f5e9]/45 bg-[linear-gradient(180deg,rgba(168,245,233,0.14),rgba(168,245,233,0.07))] text-white shadow-[0_12px_40px_rgba(52,211,153,0.08)]"
+                        : "border-white/5 bg-white/5 text-muted-foreground hover:border-white/10 hover:bg-white/8"
                     }`}
                   >
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(168,245,233,0.18),transparent_35%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                     <div className="relative z-10">
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#a8f5e9]/25 bg-[#a8f5e9]/10 text-[#a8f5e9]">
-                          <BadgeCheck className="h-4 w-4" />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#a8f5e9]/25 bg-[#a8f5e9]/10 text-[#a8f5e9]">
+                          <BadgeCheck className="h-3.5 w-3.5" />
                         </div>
                         <span
-                          className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em] ${
+                          className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${
                             submitMode === "profile"
                               ? "bg-[#a8f5e9]/15 text-[#a8f5e9]"
                               : "bg-white/8 text-muted-foreground"
@@ -238,14 +269,22 @@ export default function SubmitClient() {
                           {submitMode === "profile" ? "Selected" : "Primary"}
                         </span>
                       </div>
-                      <p className="mt-2.5 text-[13px] font-semibold text-white">Add to my profile</p>
-                      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                        Save analysis and certificate to your account.
+                      <p className="mt-3 text-[15px] font-semibold text-white sm:text-base">Add to my profile</p>
+                      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                        Save the project, score, and certificate to your account.
                       </p>
-                      <p className="mt-1 text-[10px] leading-relaxed text-[#a8f5e9]">
-                        Must match your GitHub owner.
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className="rounded-full border border-[#a8f5e9]/20 bg-[#a8f5e9]/8 px-2.5 py-1 text-[10px] font-medium text-[#a8f5e9]">
+                          Ownership check required
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-medium text-white/70">
+                          Saved to dashboard
+                        </span>
+                      </div>
+                      <p className="mt-2.5 text-xs leading-relaxed text-[#a8f5e9]">
+                        Use this only for a repo you own.
                       </p>
-                      <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a8f5e9]">
+                      <div className="mt-2.5 inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a8f5e9]">
                         Claimed mode
                         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                       </div>
@@ -254,20 +293,20 @@ export default function SubmitClient() {
                   <button
                     type="button"
                     onClick={() => setSubmitMode("public")}
-                    className={`group relative cursor-pointer overflow-hidden rounded-[1rem] border px-3 py-2.5 text-left transition-all duration-300 ${
+                    className={`group relative cursor-pointer overflow-hidden rounded-[1.15rem] border p-3.5 text-left transition-all duration-300 ${
                       submitMode === "public"
-                        ? "border border-[#a8f5e9]/40 bg-[#a8f5e9]/10 text-white"
-                        : "border border-transparent bg-white/5 text-muted-foreground hover:bg-white/10"
+                        ? "border-sky-300/35 bg-[linear-gradient(180deg,rgba(125,211,252,0.14),rgba(125,211,252,0.07))] text-white shadow-[0_12px_40px_rgba(56,189,248,0.08)]"
+                        : "border-white/5 bg-white/5 text-muted-foreground hover:border-white/10 hover:bg-white/8"
                     }`}
                   >
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(125,211,252,0.18),transparent_35%)] opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                     <div className="relative z-10">
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-sky-300/20 bg-sky-300/10 text-sky-200">
-                          <Eye className="h-4 w-4" />
+                        <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-sky-300/20 bg-sky-300/10 text-sky-200">
+                          <Eye className="h-3.5 w-3.5" />
                         </div>
                         <span
-                          className={`rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-[0.16em] ${
+                          className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] ${
                             submitMode === "public"
                               ? "bg-sky-300/15 text-sky-200"
                               : "bg-white/8 text-muted-foreground"
@@ -276,14 +315,22 @@ export default function SubmitClient() {
                           {submitMode === "public" ? "Selected" : "Read only"}
                         </span>
                       </div>
-                      <p className="mt-2.5 text-[13px] font-semibold text-white">Analyze public repo</p>
-                      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                        Run analysis without saving to your account.
+                      <p className="mt-3 text-[15px] font-semibold text-white sm:text-base">Analyze public repo only</p>
+                      <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                        See the analysis without attaching it to your account.
                       </p>
-                      <p className="mt-1 text-[10px] leading-relaxed text-sky-200">
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className="rounded-full border border-sky-300/20 bg-sky-300/8 px-2.5 py-1 text-[10px] font-medium text-sky-200">
+                          No ownership needed
+                        </span>
+                        <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-medium text-white/70">
+                          Not saved to profile
+                        </span>
+                      </div>
+                      <p className="mt-2.5 text-xs leading-relaxed text-sky-200">
                         Works for any public repo.
                       </p>
-                      <div className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-200">
+                      <div className="mt-2.5 inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sky-200">
                         Public mode
                         <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
                       </div>
@@ -291,7 +338,7 @@ export default function SubmitClient() {
                   </button>
                 </div>
               </div>
-              
+
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="space-y-2">
                   <label htmlFor="repo-url" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider ml-1">
@@ -336,9 +383,10 @@ export default function SubmitClient() {
                   <button 
                     type="submit"
                     disabled={isSubmitting || !url}
-                    className="relative w-full group overflow-hidden rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-6 py-4 text-sm font-bold text-emerald-400 transition-all hover:bg-emerald-500 hover:text-[#0f172a] hover:shadow-[0_0_30px_rgba(16,185,129,0.4)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="relative w-full cursor-pointer group overflow-hidden rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-6 py-4 text-sm font-bold text-emerald-400 transition-all duration-300 hover:border-emerald-400/35 hover:text-[#0f172a] hover:shadow-[0_0_30px_rgba(16,185,129,0.32)] disabled:cursor-not-allowed disabled:opacity-50"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-accent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(6,78,59,0)_0%,rgba(6,95,70,0.18)_22%,rgba(4,120,87,0.55)_50%,rgba(6,95,70,0.18)_78%,rgba(6,78,59,0)_100%)] opacity-70 transition-transform duration-[1600ms] ease-out group-hover:translate-x-full -translate-x-full disabled:hidden" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-accent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                     <span className="relative z-10 flex items-center justify-center gap-2">
                       {isSubmitting ? (
                         <>
@@ -349,8 +397,8 @@ export default function SubmitClient() {
                         <>
                           <Zap className="h-5 w-5" />
                           {submitMode === "profile"
-                            ? "Analyze and Save to Profile"
-                            : "Analyze Without Saving"}
+                            ? "Analyze and Save"
+                            : "Analyze Only"}
                         </>
                       )}
                     </span>
@@ -362,37 +410,58 @@ export default function SubmitClient() {
                 <Lock className="h-3.5 w-3.5" />
                 <span>
                   {submitMode === "profile"
-                    ? "Read-only access. We store the analysis record, not your raw code."
-                    : "Read-only access. Public-only analysis is not added to your profile."}
+                    ? "Read-only access. We save the proof record, not your raw code."
+                    : "Read-only access. This public-only run is not added to your profile."}
                 </span>
               </div>
 
               {statusMessage ? (
-                <div className="mt-5 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-100">
-                  {statusMessage}
-                </div>
+                <StatePanel
+                  variant={isSubmitting ? "loading" : "success"}
+                  title={isSubmitting ? "Working on your repository" : "Repository analysis complete"}
+                  message={statusMessage}
+                  className="mt-5"
+                />
               ) : null}
 
               {error ? (
-                <div className="mt-5 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-200">
-                  {error}
-                </div>
+                <StatePanel
+                  variant="error"
+                  title="Repository analysis failed"
+                  message={error}
+                  className="mt-5"
+                />
               ) : null}
 
               {analysis ? (
-                <div className="mt-5 rounded-xl border border-white/10 bg-white/5 p-4 text-sm text-muted-foreground">
-                  Result ready for{" "}
-                  <span className="font-semibold text-white">{analysis.repo.fullName}</span>.
-                  The detailed analysis is shown below.
-                </div>
+                <StatePanel
+                  variant="info"
+                  title="Saved result ready"
+                  message={`Result ready for ${analysis.repo.fullName}. The detailed analysis is shown below.`}
+                  className="mt-5"
+                />
               ) : null}
             </div>
           </motion.div>
         </div>
 
         {/* Right Column - Info & Process */}
-        <div className="lg:col-span-7 space-y-8">
-          
+        <div className="space-y-6 lg:col-span-6">
+          <motion.div
+            variants={item}
+            className="rounded-[1.45rem] border border-[#a8f5e9]/10 bg-[linear-gradient(180deg,rgba(168,245,233,0.06),rgba(15,23,42,0.14))] p-4 backdrop-blur-xl shadow-lg"
+          >
+            <div className="mb-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#a8f5e9]">
+                Certificate status
+              </p>
+              <p className="mt-1 text-xs sm:text-sm leading-relaxed text-white/70">
+                Quick meaning of each proof state so you know what the saved proof actually means.
+              </p>
+            </div>
+            <VerificationStatusLegend compact />
+          </motion.div>
+
           {/* Analysis Goals Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <motion.div variants={item} className="group relative overflow-hidden rounded-[2rem] border border-white/10 bg-surface/40 p-6 backdrop-blur-xl hover:border-accent/40 transition-all duration-300 shadow-lg">
@@ -469,7 +538,7 @@ export default function SubmitClient() {
                     <h4 className="font-bold text-white text-sm">Deep Scan</h4>
                     <span className="text-[10px] font-mono text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded border border-emerald-400/20">Step 1</span>
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">Fetching repository metadata, commit history, and resolving dependency graphs.</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">We fetch public repo metadata, file structure, and branch details.</p>
                 </div>
               </div>
 
@@ -486,7 +555,7 @@ export default function SubmitClient() {
                     <h4 className="font-bold text-white text-sm">AI Profiling</h4>
                     <span className="text-[10px] font-mono text-muted-foreground bg-white/5 px-2 py-0.5 rounded border border-white/10">Step 2</span>
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">Multi-model agents analyze code semantics to quantify technical proficiency.</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">We score architecture, backend quality, documentation, and technical evidence.</p>
                 </div>
               </div>
 
@@ -500,10 +569,10 @@ export default function SubmitClient() {
                 </div>
                 <div className="flex-1 p-4 rounded-2xl border border-white/10 bg-white/5 backdrop-blur-sm transition-colors group-hover:bg-white/10">
                   <div className="flex items-center justify-between mb-1">
-                    <h4 className="font-bold text-white text-sm">On-chain Verification</h4>
+                    <h4 className="font-bold text-white text-sm">Certificate Proof</h4>
                     <span className="text-[10px] font-mono text-muted-foreground bg-white/5 px-2 py-0.5 rounded border border-white/10">Step 3</span>
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">Minting cryptographic proofs of your skills directly onto the blockchain.</p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">If you save the repo to your profile, we create one project certificate and attach its proof record.</p>
                 </div>
               </div>
 
