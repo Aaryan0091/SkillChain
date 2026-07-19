@@ -147,7 +147,6 @@ export default function Aurora(props: AuroraProps) {
     gl.clearColor(0, 0, 0, 0);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    // @ts-expect-error OGL exposes canvas on the renderer context at runtime.
     gl.canvas.style.backgroundColor = 'transparent';
 
     let program: ProgramLike | null = null;
@@ -165,7 +164,6 @@ export default function Aurora(props: AuroraProps) {
 
     const geometry = new Triangle(gl);
     if (geometry.attributes.uv) {
-      // @ts-expect-error The generated triangle geometry may expose uv which we intentionally drop.
       delete geometry.attributes.uv;
     }
 
@@ -185,7 +183,7 @@ export default function Aurora(props: AuroraProps) {
         uBlend: { value: blend }
       }
     });
-    program = oglProgram as ProgramLike;
+    program = oglProgram as unknown as ProgramLike;
 
     const mesh = new Mesh(gl, { geometry, program: oglProgram });
     ctn.appendChild(gl.canvas);

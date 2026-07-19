@@ -34,6 +34,12 @@ type MetricRecord = {
   test_ratio: number | null;
   raw_metrics_json?: {
     frameworks?: string[];
+    packageNames?: string[];
+    selectedFiles?: {
+      path: string;
+      kind: string;
+    }[];
+    signals?: Record<string, boolean>;
     fileStats?: {
       totalFiles?: number;
       sourceFiles?: number;
@@ -275,6 +281,11 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
   const risks = score?.score_breakdown_json?.risks || [];
   const evidence = score?.score_breakdown_json?.skillEvidence || [];
   const frameworks = metric?.raw_metrics_json?.frameworks || [];
+  const packageNames = metric?.raw_metrics_json?.packageNames || [];
+  const selectedFiles = metric?.raw_metrics_json?.selectedFiles || [];
+  const detectedSignals = Object.entries(metric?.raw_metrics_json?.signals || {})
+    .filter(([, passed]) => Boolean(passed))
+    .map(([label]) => titleCase(label.replace(/^has/, "").replace(/^uses/, "")));
   const overall = averageNumbers([
     score?.backend_score,
     score?.architecture_score,
@@ -570,6 +581,66 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                     ? resolveCertificateVerification(certificates[0], project).summary
                     : "No certificate has been issued for this project yet."}
                 </p>
+              </article>
+            </div>
+          </section>
+
+          <section className="rounded-[2rem] border border-border/70 bg-surface/40 p-6 shadow-sm backdrop-blur-xl">
+            <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-white">
+              <Code2 className="h-5 w-5 text-accent" />
+              Evidence ledger
+            </h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted">
+              These are the concrete saved inputs that contributed to the analysis result for this repository.
+            </p>
+            <div className="mt-5 grid gap-4 lg:grid-cols-3">
+              <article className="rounded-[1.3rem] border border-white/8 bg-background/40 p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-muted">Detected signals</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {detectedSignals.length ? (
+                    detectedSignals.map((item, index) => (
+                      <span
+                        key={`${item}-${index}`}
+                        className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/85"
+                      >
+                        {item}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted">No explicit signals were saved.</p>
+                  )}
+                </div>
+              </article>
+              <article className="rounded-[1.3rem] border border-white/8 bg-background/40 p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-muted">Packages and frameworks</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {[...frameworks, ...packageNames.slice(0, 8)].length ? (
+                    [...frameworks, ...packageNames.slice(0, 8)].map((item, index) => (
+                      <span
+                        key={`${item}-${index}`}
+                        className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-white/85"
+                      >
+                        {item}
+                      </span>
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted">No package evidence was saved.</p>
+                  )}
+                </div>
+              </article>
+              <article className="rounded-[1.3rem] border border-white/8 bg-background/40 p-4">
+                <p className="text-xs uppercase tracking-[0.16em] text-muted">Selected files inspected</p>
+                <ul className="mt-3 space-y-2">
+                  {selectedFiles.length ? (
+                    selectedFiles.slice(0, 6).map((file, index) => (
+                      <li key={`${file.path}-${index}`} className="rounded-xl border border-white/8 bg-white/5 px-3 py-2 text-xs leading-relaxed text-white/80">
+                        <span className="font-semibold text-white/90">{file.kind}:</span> {file.path}
+                      </li>
+                    ))
+                  ) : (
+                    <li className="text-sm text-muted">No inspected file list was saved.</li>
+                  )}
+                </ul>
               </article>
             </div>
           </section>

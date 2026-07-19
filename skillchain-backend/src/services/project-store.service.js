@@ -411,6 +411,9 @@ async function fetchProjectsForUser(userId) {
         started_at,
         finished_at,
         error_message
+      ),
+      users (
+        email
       )
     `
     )
@@ -457,6 +460,215 @@ async function fetchProjectsForUser(userId) {
   }
 
   return projects;
+}
+
+function titleCase(value) {
+  return value
+    .split(/[\s._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function buildCandidateSummary(userRecord, viewerId = null) {
+  const email = userRecord?.email || null;
+  const isViewer = Boolean(viewerId && userRecord?.id === viewerId);
+  const publicHandle = `candidate-${String(userRecord?.id || "").slice(0, 8)}`;
+  const handle = isViewer && email ? email.split("@")[0] : publicHandle;
+  const label = isViewer && email ? titleCase(email.split("@")[0]) : titleCase(publicHandle);
+  const projects = Array.isArray(userRecord?.projects) ? userRecord.projects : [];
+  const allCertificates = projects.flatMap((project) => project?.certificates || []);
+  const sortedCertificates = [...allCertificates].sort((a, b) => {
+    const aTime = new Date(a?.created_at || 0).getTime();
+    const bTime = new Date(b?.created_at || 0).getTime();
+    return bTime - aTime;
+  });
+  const primaryCertificate =
+    sortedCertificates.find(
+      (certificate) =>
+        certificate?.verification_status === "verified" ||
+        certificate?.status === "verified"
+    ) || sortedCertificates[0] || null;
+  const verifiedCertificateCount = projects.reduce(
+    (count, project) =>
+      count +
+      ((project?.certificates || []).filter(
+        (certificate) =>
+          certificate?.verification_status === "verified" ||
+          certificate?.status === "verified"
+      ).length || 0),
+    0
+  );
+
+  return {
+    id: userRecord.id,
+    email: isViewer ? email : null,
+    handle,
+    label,
+    projectCount: projects.length,
+    verifiedCertificateCount,
+    primaryCertificateId: primaryCertificate?.id || null,
+  };
+}
+
+async function searchRecruiterCandidates(searchTerm = "", limit = 8, viewerId = null) {
+  const supabase = getSupabaseAdminClient();
+  const safeLimit = Math.min(Math.max(limit, 1), 12);
+  const normalizedSearch = searchTerm.trim();
+
+  let query = supabase
+    .from("users")
+    .select(
+      `
+      id,
+      email,
+      projects!inner (
+        id,
+        certificates (
+          id,
+          status,
+          verification_status
+        )
+      )
+    `
+    )
+    .limit(safeLimit);
+
+  if (normalizedSearch) {
+    query = query.ilike("email", `%${normalizedSearch}%`);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(`Failed to search recruiter candidates: ${error.message}`);
+  }
+
+  return (data || [])
+    .map((item) => buildCandidateSummary(item, viewerId))
+    .sort((a, b) => {
+      if (b.projectCount !== a.projectCount) {
+        return b.projectCount - a.projectCount;
+      }
+
+      return b.verifiedCertificateCount - a.verifiedCertificateCount;
+    });
+}
+
+async function fetchRecruiterCandidateWorkspace(userId, viewerId = null) {
+  const supabase = getSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("users")
+    .select(
+      `
+      id,
+      email,
+      projects!inner (
+        id,
+        user_id,
+        repo_url,
+        repo_name,
+        analysis_status,
+        analysis_version,
+        github_repo_id,
+        default_branch,
+        created_at,
+        last_analyzed_at,
+        analysis_error,
+        metrics (
+          id,
+          project_id,
+          analysis_version,
+          files,
+          test_ratio,
+          raw_metrics_json
+        ),
+        scores (
+          id,
+          project_id,
+          backend_score,
+          architecture_score,
+          documentation_score,
+          confidence_score,
+          explanation,
+          score_breakdown_json
+        ),
+        certificates (
+          id,
+          project_id,
+          status,
+          created_at,
+          verification_status
+        ),
+        analysis_jobs (
+          id,
+          project_id,
+          job_type,
+          status,
+          started_at,
+          finished_at,
+          error_message
+        ),
+        users (
+          email
+        )
+      )
+    `
+    )
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to load recruiter candidate workspace: ${error.message}`);
+  }
+
+  if (!data) {
+    return null;
+  }
+
+  const projects = Array.isArray(data.projects) ? data.projects : [];
+
+  for (const project of projects) {
+    if (!Array.isArray(project.certificates) || !project.certificates.length) continue;
+
+    const refreshedCertificates = await Promise.all(
+      project.certificates.map(async (certificate) => {
+        if (!certificate?.id) return certificate;
+
+        if (
+          certificate.verification_status === "verified" ||
+          certificate.status === "verified"
+        ) {
+          return certificate;
+        }
+
+        try {
+          const refreshed = await finalizeCertificateVerification(certificate.id);
+          if (!refreshed) return certificate;
+
+          return {
+            ...certificate,
+            status: refreshed.status ?? certificate.status,
+            verification_status:
+              refreshed.verification_status ?? certificate.verification_status,
+          };
+        } catch {
+          return certificate;
+        }
+      })
+    );
+
+    project.certificates = refreshedCertificates;
+  }
+
+  return {
+    candidate: buildCandidateSummary(data, viewerId),
+    projects: projects.sort((a, b) => {
+      const aTime = new Date(a.created_at || 0).getTime();
+      const bTime = new Date(b.created_at || 0).getTime();
+      return bTime - aTime;
+    }),
+  };
 }
 
 async function fetchProjectById(projectId, userId) {
@@ -836,6 +1048,7 @@ module.exports = {
   createProjectRecord,
   deleteCertificateRecord,
   fetchProjectById,
+  fetchRecruiterCandidateWorkspace,
   fetchProjectsForUser,
   fetchOwnedCertificateById,
   fetchPublicCertificateById,
@@ -843,6 +1056,7 @@ module.exports = {
   finalizeCertificateVerification,
   markAnalysisJob,
   replaceProjectArtifacts,
+  searchRecruiterCandidates,
   deleteProjectRecord,
   updateCertificateRecord,
   updateProjectRecord,

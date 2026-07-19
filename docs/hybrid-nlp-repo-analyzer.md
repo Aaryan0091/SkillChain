@@ -192,6 +192,32 @@ Why it matters:
 
 - Rules can say `hasApiRoutes: true`; interpretation can explain that the repo demonstrates backend API design.
 
+## Recruiter Role-Fit NLP Layer
+
+The recruiter workflow uses the saved analyzer output and applies a lightweight NLP-style matching step for role fit.
+
+How it works:
+
+1. It reads saved project evidence text.
+2. The text is normalized.
+3. Words and signals are tokenized into meaningful terms.
+4. Recruiter-role keywords are matched against saved project evidence.
+5. Phrase overlap is used to estimate whether the candidate's saved work aligns with the selected role.
+6. The matched signals are then combined with numeric project scores.
+
+In simple words:
+
+- it reads the saved project evidence text
+- breaks it into meaningful terms
+- compares those terms with what the selected role usually needs
+- then combines that with the actual numeric project scores
+
+Important note:
+
+- This is NLP-style processing, but not a heavy live LLM call.
+- The current system is best described as rule-based + score-based + lightweight text matching.
+- A deeper semantic or LLM-based recruiter-matching layer can be added later without changing the core project-analysis pipeline.
+
 ## Step 7: Scoring
 
 Scores combine deterministic signals and interpretation.

@@ -73,6 +73,44 @@ Traditional resumes rely on self-claimed skills. SkillChain AI replaces that wit
 - Compare displayed certificate data with stored blockchain hash
 - Show authenticity result and summary evidence
 
+### 8. Recruiter Role Fit
+
+- Compare saved project evidence against recruiter role presets
+- Combine role-signal matching with numeric project scores
+- Show role fit, strengths, risks, and recommended use case
+- Support automatic best-role selection through Auto-fit
+
+## How Recruiter Role Fit Works
+
+The recruiter workflow uses a lightweight NLP-style matching layer, not a heavy live LLM call.
+
+It works like this:
+
+1. Saved project evidence is collected from:
+   - detected frameworks
+   - skill evidence
+   - strengths and risks
+   - repository summary/explanation
+   - backend, frontend, architecture, and confidence scores
+2. The evidence text is normalized.
+3. Words and phrases are tokenized into meaningful terms.
+4. Recruiter-role keywords are matched against that saved project evidence.
+5. Phrase overlap is used to estimate whether the candidate's work aligns with the selected role.
+6. That signal matching is combined with numeric project scores and verified-proof boost.
+
+In simple words:
+
+- the system reads saved project evidence text
+- breaks it into meaningful terms
+- compares those terms with what the selected role usually needs
+- then combines that with the actual numeric project scores
+
+Current implementation notes:
+
+- This does use NLP-style processing, but in a lightweight form.
+- It does not currently use a large language model live for recruiter scoring.
+- It is best described as rule-based + score-based + lightweight text matching.
+
 ## Workspace Structure
 
 - `skillchain-frontend` - Next.js frontend for landing page, auth, dashboard, repository submission, and certificate viewing

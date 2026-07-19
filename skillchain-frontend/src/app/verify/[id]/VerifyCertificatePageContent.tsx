@@ -24,6 +24,12 @@ type MetricRecord = {
   test_ratio: number | null;
   raw_metrics_json?: {
     frameworks?: string[];
+    packageNames?: string[];
+    selectedFiles?: {
+      path: string;
+      kind: string;
+    }[];
+    signals?: Record<string, boolean>;
     fileStats?: {
       totalFiles?: number;
       sourceFiles?: number;
@@ -254,6 +260,11 @@ export default async function VerifyCertificatePageContent({
   const strengths = score?.score_breakdown_json?.strengths || [];
   const risks = score?.score_breakdown_json?.risks || [];
   const frameworks = metrics?.raw_metrics_json?.frameworks || [];
+  const packageNames = metrics?.raw_metrics_json?.packageNames || [];
+  const selectedFiles = metrics?.raw_metrics_json?.selectedFiles || [];
+  const detectedSignals = Object.entries(metrics?.raw_metrics_json?.signals || {})
+    .filter(([, passed]) => Boolean(passed))
+    .map(([label]) => titleCase(label.replace(/^has/, "").replace(/^uses/, "")));
   const achievements = [
     ...(score?.score_breakdown_json?.skillEvidence || []).slice(0, 3),
     ...frameworks.slice(0, 2),
@@ -566,6 +577,69 @@ export default async function VerifyCertificatePageContent({
                   </li>
                 ))}
               </ul>
+            </section>
+
+            <section className="rounded-[2rem] border border-border/80 bg-surface/50 p-6 shadow-sm backdrop-blur-md">
+              <h2 className="mb-5 flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">
+                <Code2 className="h-5 w-5 text-accent" />
+                Evidence ledger
+              </h2>
+              <div className="grid gap-4 md:grid-cols-3">
+                <article className="rounded-2xl border border-border/60 bg-background/60 p-4.5 shadow-sm">
+                  <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-muted">
+                    Detected signals
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {detectedSignals.length ? (
+                      detectedSignals.map((item, index) => (
+                        <span
+                          key={`${item}-${index}`}
+                          className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-foreground/85"
+                        >
+                          {item}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted">No explicit signals were saved.</p>
+                    )}
+                  </div>
+                </article>
+                <article className="rounded-2xl border border-border/60 bg-background/60 p-4.5 shadow-sm">
+                  <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-muted">
+                    Frameworks and packages
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {[...frameworks, ...packageNames.slice(0, 8)].length ? (
+                      [...frameworks, ...packageNames.slice(0, 8)].map((item, index) => (
+                        <span
+                          key={`${item}-${index}`}
+                          className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-foreground/85"
+                        >
+                          {item}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted">No package evidence was saved.</p>
+                    )}
+                  </div>
+                </article>
+                <article className="rounded-2xl border border-border/60 bg-background/60 p-4.5 shadow-sm">
+                  <p className="mb-2 text-[11px] font-extrabold uppercase tracking-widest text-muted">
+                    Selected files inspected
+                  </p>
+                  <ul className="space-y-2">
+                    {selectedFiles.length ? (
+                      selectedFiles.slice(0, 5).map((file, index) => (
+                        <li key={`${file.path}-${index}`} className="rounded-xl border border-white/8 bg-white/5 px-3 py-2 text-xs leading-relaxed text-foreground/80">
+                          <span className="font-semibold text-foreground/90">{file.kind}:</span> {file.path}
+                        </li>
+                      ))
+                    ) : (
+                      <li className="text-sm text-muted">No inspected file list was saved.</li>
+                    )}
+                  </ul>
+                </article>
+              </div>
             </section>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { createClient, getSessionUser } from "@/utils/supabase/server";
 import { averageNumbers } from "@/lib/formatting";
-import { fetchDashboardProjects } from "@/lib/dashboard-data";
+import { fetchDashboardProjects, type ProjectRecord } from "@/lib/dashboard-data";
 import ProfileClient from "./ProfileClient";
 
 export default async function ProfilePage() {
@@ -55,7 +55,7 @@ export default async function ProfilePage() {
     provider: user.app_metadata?.provider || 'Email',
   };
 
-  let projects = [];
+  let projects: ProjectRecord[] = [];
   let loadError: string | null = null;
 
   try {
@@ -88,7 +88,7 @@ export default async function ProfilePage() {
   for (const project of projects) {
     const frameworkSkills = project.metrics?.[0]?.raw_metrics_json?.frameworks || [];
     const evidenceSkills = project.scores?.[0]?.score_breakdown_json?.skillEvidence || [];
-    const projectSkills = new Set(
+    const projectSkills = new Set<string>(
       [...frameworkSkills, ...evidenceSkills]
         .map((skill) => skill?.trim())
         .filter(Boolean)

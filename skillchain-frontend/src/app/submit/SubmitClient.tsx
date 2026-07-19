@@ -57,6 +57,28 @@ type AnalysisResult = {
 };
 
 type SubmitMode = "profile" | "public";
+type OwnershipNotice = {
+  mode: "owner" | "contributor" | "unclaimed_public_analysis";
+  repoOwner?: string;
+  githubUsername?: string;
+  message?: string;
+};
+
+function normalizeSubmitErrorMessage(message: string) {
+  if (message.includes("GITHUB_TOKEN is invalid or expired")) {
+    return "GitHub access is misconfigured on the backend right now. Replace the backend GITHUB_TOKEN in skillchain-backend/.env, then try again.";
+  }
+
+  if (message.includes("GitHub API rate limit")) {
+    return `${message} You can wait for the reset window, add a valid backend GITHUB_TOKEN, or try again later.`;
+  }
+
+  if (message.includes("Repository not found or not publicly accessible")) {
+    return "SkillChain could not read that repository. Check the GitHub URL and confirm that the repository is public.";
+  }
+
+  return message;
+}
 
 export default function SubmitClient() {
   const [url, setUrl] = useState("");
@@ -66,6 +88,7 @@ export default function SubmitClient() {
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   const [statusMessage, setStatusMessage] = useState("");
+  const [ownershipNotice, setOwnershipNotice] = useState<OwnershipNotice | null>(null);
   const analysisRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
@@ -94,6 +117,7 @@ export default function SubmitClient() {
     setIsSubmitting(true);
     setError("");
     setAnalysis(null);
+    setOwnershipNotice(null);
     setStatusMessage("Connecting to the analyzer...");
 
     try {
@@ -155,6 +179,7 @@ export default function SubmitClient() {
       }
 
       setAnalysis(result.data.analysis);
+      setOwnershipNotice((result.data.ownership || null) as OwnershipNotice | null);
       setStatusMessage(
         submitMode === "profile"
           ? "Analysis complete and saved to your profile."
@@ -165,7 +190,7 @@ export default function SubmitClient() {
       console.error("[SkillChain] Repository analysis failed", caughtError);
       setError(
         caughtError instanceof Error
-          ? caughtError.message
+          ? normalizeSubmitErrorMessage(caughtError.message)
           : "Repository analysis failed."
       );
       setStatusMessage("");
@@ -223,6 +248,9 @@ export default function SubmitClient() {
               <div className="mb-3 flex flex-wrap gap-2">
                 <span className="rounded-full border border-[#a8f5e9]/20 bg-[#a8f5e9]/10 px-2.5 py-1 text-[10px] font-medium text-[#a8f5e9]">
                   Saved proof for owned repos
+                </span>
+                <span className="rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[10px] font-medium text-amber-200">
+                  Contributor repos are marked as contributor-linked
                 </span>
                 <span className="rounded-full border border-sky-300/20 bg-sky-300/10 px-2.5 py-1 text-[10px] font-medium text-sky-200">
                   Public analysis for any repo
@@ -283,6 +311,9 @@ export default function SubmitClient() {
                       </div>
                       <p className="mt-2.5 text-xs leading-relaxed text-[#a8f5e9]">
                         Use this only for a repo you own.
+                      </p>
+                      <p className="mt-1.5 text-[11px] leading-relaxed text-white/45">
+                        If you only contribute to a team repository, SkillChain will tell you clearly that you are a contributor, not the owner.
                       </p>
                       <div className="mt-2.5 inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#a8f5e9]">
                         Claimed mode
@@ -438,6 +469,29 @@ export default function SubmitClient() {
                   variant="info"
                   title="Saved result ready"
                   message={`Result ready for ${analysis.repo.fullName}. The detailed analysis is shown below.`}
+                  className="mt-5"
+                />
+              ) : null}
+
+              {ownershipNotice ? (
+                <StatePanel
+                  variant={ownershipNotice.mode === "contributor" ? "warning" : "success"}
+                  title={
+                    ownershipNotice.mode === "contributor"
+                      ? "Contributor-linked repository"
+                      : ownershipNotice.mode === "owner"
+                        ? "Owner-confirmed repository"
+                        : "Public-only analysis"
+                  }
+                  message={
+                    ownershipNotice.mode === "contributor"
+                      ? ownershipNotice.message ||
+                        "You were detected as a contributor on this repository, but you do not own it."
+                      : ownershipNotice.mode === "owner"
+                        ? ownershipNotice.message ||
+                          "This repository belongs to your signed-in GitHub account."
+                        : "This repository was analyzed without being saved to any SkillChain profile."
+                  }
                   className="mt-5"
                 />
               ) : null}

@@ -125,7 +125,7 @@ export default function VerifyIndexClient({
   }, []);
 
   return (
-    <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-12">
+    <div className="mt-8 grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
       <div className="space-y-6 lg:col-span-5">
         <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-surface/40 p-5 shadow-2xl backdrop-blur-xl sm:p-6 lg:p-7">
           <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-accent/20 blur-[80px]" />
@@ -184,7 +184,7 @@ export default function VerifyIndexClient({
       <div className="space-y-6 lg:col-span-7">
         <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-surface/40 p-5 shadow-2xl backdrop-blur-xl sm:p-6 lg:p-7">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(52,211,153,0.12),transparent_28%),radial-gradient(circle_at_20%_80%,rgba(59,130,246,0.12),transparent_26%)]" />
-          <div className="relative z-10">
+          <div className="relative z-10 mx-auto max-w-5xl">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-4 py-2 text-sm font-medium text-accent backdrop-blur-md">
               <Sparkles className="h-4 w-4" />
               {isDashboard ? "Saved proof workspace" : "Recruiter-ready proof layer"}
@@ -233,7 +233,7 @@ export default function VerifyIndexClient({
         ) : null}
 
         <section className="space-y-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+          <div className="mx-auto flex max-w-5xl flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
                 {isDashboard ? "Recent Verification Records" : "Recent Public Records"}
@@ -249,9 +249,9 @@ export default function VerifyIndexClient({
             </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="mx-auto grid max-w-5xl grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {isLoading ? (
-            <SectionSkeleton cards={4} className="sm:col-span-2" />
+            <SectionSkeleton cards={3} className="md:col-span-2 xl:col-span-3" />
           ) : certificates.length ? (
             certificates.map((certificate) => (
                 <Link
@@ -272,10 +272,10 @@ export default function VerifyIndexClient({
                     Issued {formatDate(certificate.created_at)}
                   </p>
 
-                  <div className="mt-5 flex items-center justify-between">
-                    <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80">
+                  <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+                    <span className="inline-flex max-w-full items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/80">
                       <Fingerprint className="h-3.5 w-3.5 text-accent" />
-                      {certificate.id}
+                      <span className="truncate">{certificate.id}</span>
                     </span>
                     <span className="inline-flex items-center gap-1 text-sm font-semibold text-accent transition-transform group-hover:translate-x-1">
                       Open
@@ -286,7 +286,7 @@ export default function VerifyIndexClient({
               </Link>
             ))
           ) : (
-            <div className="sm:col-span-2">
+            <div className="md:col-span-2 xl:col-span-3">
               <EmptyStateCard
                 compact
                 title={

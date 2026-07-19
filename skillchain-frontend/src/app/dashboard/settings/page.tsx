@@ -6,6 +6,7 @@ import {
   FolderGit2,
   Link2,
   LogOut,
+  SearchCheck,
   Shield,
   ShieldCheck,
   UserCircle2,
@@ -107,6 +108,40 @@ export default async function DashboardSettingsPage() {
       note: "Analyze another repo and attach it to your profile.",
       icon: FolderGit2,
     },
+    {
+      href: "/dashboard/projects",
+      label: "Open projects",
+      note: "Review every saved repository and its evidence trail.",
+      icon: FolderGit2,
+    },
+    {
+      href: "/dashboard/verify",
+      label: "Open verify area",
+      note: "Check certificate proof states from inside the dashboard.",
+      icon: SearchCheck,
+    },
+  ];
+
+  const connectionCards = [
+    {
+      label: "GitHub connected",
+      value: githubUsername ? "Connected" : "Not connected",
+      note: githubUsername
+        ? `Ownership checks run against @${githubUsername}.`
+        : "Sign in with GitHub if you want to add repositories to your profile.",
+    },
+    {
+      label: "Profile save rule",
+      value: "Owner or contributor only",
+      note:
+        "Saved profile submissions require either repository ownership or contributor detection.",
+    },
+    {
+      label: "Third-party repos",
+      value: "Public analysis only",
+      note:
+        "Repositories you do not own and do not contribute to should stay in public-only analysis mode.",
+    },
   ];
 
   return (
@@ -192,10 +227,26 @@ export default async function DashboardSettingsPage() {
             <ul className="mt-4 space-y-3 text-sm leading-relaxed text-muted">
               <li>Review which account is currently connected.</li>
               <li>Confirm which provider you used to log in.</li>
+              <li>See which GitHub username is used for ownership checks.</li>
               <li>Sign out safely without losing saved project records.</li>
-              <li>See where broader account controls will expand later.</li>
+              <li>Open your project, verify, and certificate work areas quickly.</li>
             </ul>
           </section>
+        </div>
+
+        <div className="mt-4 grid gap-4 lg:grid-cols-3">
+          {connectionCards.map((card) => (
+            <section
+              key={card.label}
+              className="rounded-[1.6rem] border border-white/10 bg-background/45 p-5"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+                {card.label}
+              </p>
+              <p className="mt-2 text-lg font-semibold text-white">{card.value}</p>
+              <p className="mt-2 text-sm leading-relaxed text-muted">{card.note}</p>
+            </section>
+          ))}
         </div>
 
         <div className="mt-4 grid gap-4 xl:grid-cols-[1fr_1fr]">
@@ -240,10 +291,10 @@ export default async function DashboardSettingsPage() {
                 Public proof is project-based. Your profile is a summary layer, while the main proof lives on project certificate verification pages.
               </p>
               <p>
-                Connected-account switching, notification preferences, and deeper profile editing are still future controls.
+                If a repository is yours, SkillChain can save it as your own project. If you are only a contributor on a team repo, SkillChain can still save it, but it should be understood as contributor-linked rather than owner-claimed.
               </p>
               <p>
-                For now, this page focuses on real options that already work instead of fake saved preferences.
+                Repositories that you neither own nor contribute to should use public-only analysis instead of being attached to your saved profile.
               </p>
             </div>
           </section>

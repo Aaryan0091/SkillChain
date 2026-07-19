@@ -1,20 +1,19 @@
+import { verificationStateDefinitions } from "@/lib/certificate-verification";
+
 const statusItems = [
   {
     label: "Verified",
-    description:
-      "All proof checks passed. The saved certificate and its chain reference match.",
+    description: verificationStateDefinitions.verified,
     tone: "border-emerald-400/25 bg-emerald-500/10 text-emerald-200",
   },
   {
     label: "Pending",
-    description:
-      "The certificate exists, but the final proof step is still being completed.",
+    description: verificationStateDefinitions.pending,
     tone: "border-[#a8f5e9]/25 bg-[#a8f5e9]/10 text-[#a8f5e9]",
   },
   {
     label: "Failed",
-    description:
-      "Something in the proof flow did not pass. The record should be retried or replaced.",
+    description: verificationStateDefinitions.failed,
     tone: "border-red-400/25 bg-red-500/10 text-red-200",
   },
 ];

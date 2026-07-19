@@ -30,6 +30,15 @@ export type CertificateVerificationView = {
   checks: VerificationCheck[];
 };
 
+export const verificationStateDefinitions = {
+  verified:
+    "All proof checks passed. The repository analysis finished, the certificate payload is saved, and the blockchain anchor matches the stored certificate hash.",
+  pending:
+    "The certificate has been issued, but final proof confirmation is still in progress, still settling on-chain, or still waiting for one required proof step.",
+  failed:
+    "The certificate record exists, but at least one proof check did not pass. Reverify or replace it before treating it as trusted proof.",
+} as const;
+
 export function resolveCertificateVerification(
   certificate: CertificateStatusLike,
   project?: ProjectVerificationLike | null
@@ -80,8 +89,7 @@ export function resolveCertificateVerification(
       state,
       badgeLabel: "Verified",
       headline: "Verification passed",
-      summary:
-        "This certificate passed the final proof checks and the stored certificate hash matches its blockchain reference.",
+      summary: verificationStateDefinitions.verified,
       recruiterSummary:
         "Use this as a trusted project-level proof record for the candidate.",
       reason:
@@ -97,8 +105,7 @@ export function resolveCertificateVerification(
       state,
       badgeLabel: "Failed",
       headline: "Verification failed",
-      summary:
-        "This certificate did not pass the final proof checks. Treat it as not trusted until the record is regenerated or reverified.",
+      summary: verificationStateDefinitions.failed,
       recruiterSummary:
         "Do not treat this certificate as verified proof right now.",
       reason:
@@ -119,8 +126,7 @@ export function resolveCertificateVerification(
     state,
     badgeLabel: "Pending",
     headline: "Verification pending",
-    summary:
-      "The project certificate exists, but final proof is still incomplete. The analysis may be done while blockchain confirmation or final verification is still pending.",
+    summary: verificationStateDefinitions.pending,
     recruiterSummary:
       "Treat this as an issued certificate that is not fully verified yet.",
     reason:

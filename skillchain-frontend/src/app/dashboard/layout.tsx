@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import BackButton from "@/components/BackButton";
+import { readStoredDecisionBoard } from "@/lib/recruiter-board";
 import { createClient } from "@/utils/supabase/client";
 
 function displayIdentity(user: User | null) {
@@ -58,6 +59,14 @@ const dashboardNavItems = [
     ),
   },
   {
+    href: "/dashboard/recruiter",
+    label: "Recruiter",
+    match: (pathname: string) => pathname.startsWith("/dashboard/recruiter"),
+    icon: (
+      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h6m-3 8c4.418 0 8-1.79 8-4V6a2 2 0 00-2-2H8a2 2 0 00-2 2v10c0 2.21 3.582 4 8 4z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 4V2m6 2V2"/></svg>
+    ),
+  },
+  {
     href: "/dashboard/certificates",
     label: "Certificates",
     match: (pathname: string) => pathname.startsWith("/dashboard/certificates"),
@@ -90,9 +99,18 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+  const activePath =
+    pathname || (typeof window !== "undefined" ? window.location.pathname : "");
   const [user, setUser] = useState<User | null>(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [hasRecruiterBoard, setHasRecruiterBoard] = useState(false);
+  const [isRecruiterMenuOpen, setIsRecruiterMenuOpen] = useState(
+    activePath.startsWith("/dashboard/recruiter/extend") ||
+      activePath.startsWith("/dashboard/recruiter/search") ||
+      activePath.startsWith("/dashboard/recruiter/candidate") ||
+      activePath.startsWith("/dashboard/recruiter/public-repos")
+  );
 
   useEffect(() => {
     const supabase = createClient();
@@ -100,19 +118,17 @@ export default function DashboardLayout({
 
     const checkUser = async () => {
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const currentUser = session?.user ?? null;
+        data: { user: authenticatedUser },
+      } = await supabase.auth.getUser();
 
       if (!isActive) return;
 
-      if (!currentUser) {
+      if (!authenticatedUser) {
         router.replace("/login");
         return;
       }
 
-      setUser(currentUser);
+      setUser(authenticatedUser);
       setIsCheckingAuth(false);
     };
 
@@ -123,15 +139,22 @@ export default function DashboardLayout({
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isActive) return;
 
-      const currentUser = session?.user ?? null;
-
-      if (!currentUser) {
+      if (!session) {
         router.replace("/login");
         return;
       }
 
-      setUser(currentUser);
-      setIsCheckingAuth(false);
+      void supabase.auth.getUser().then(({ data }) => {
+        if (!isActive) return;
+
+        if (!data.user) {
+          router.replace("/login");
+          return;
+        }
+
+        setUser(data.user);
+        setIsCheckingAuth(false);
+      });
     });
 
     return () => {
@@ -139,6 +162,24 @@ export default function DashboardLayout({
       subscription.unsubscribe();
     };
   }, [router]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const syncRecruiterBoard = () => {
+      setHasRecruiterBoard(readStoredDecisionBoard(user.id).length > 0);
+    };
+
+    syncRecruiterBoard();
+
+    window.addEventListener("skillchain-recruiter-board-updated", syncRecruiterBoard);
+    window.addEventListener("storage", syncRecruiterBoard);
+
+    return () => {
+      window.removeEventListener("skillchain-recruiter-board-updated", syncRecruiterBoard);
+      window.removeEventListener("storage", syncRecruiterBoard);
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -153,9 +194,11 @@ export default function DashboardLayout({
     return () => window.removeEventListener("keydown", handleEscape);
   }, [isMenuOpen]);
 
+  const visibleNavItems = dashboardNavItems.filter(
+    (item) => item.href !== "/dashboard/recruiter"
+  );
+  const recruiterIsActive = activePath.startsWith("/dashboard/recruiter");
   const { displayName, displayEmail, avatarLetter, githubUsername } = displayIdentity(user);
-  const activePath =
-    pathname || (typeof window !== "undefined" ? window.location.pathname : "");
   const isProfileActive = activePath.startsWith("/dashboard/profile");
   const isOverviewPage = activePath === "/dashboard";
   const isVerifyRecordPage =
@@ -188,7 +231,7 @@ export default function DashboardLayout({
           </Link>
         </div>
         <nav className="flex-1 space-y-2 p-4">
-          {dashboardNavItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = item.match(activePath);
 
             return (
@@ -207,6 +250,112 @@ export default function DashboardLayout({
               </Link>
             );
           })}
+          <div className="space-y-2">
+            <div
+              className={`rounded-xl transition-all ${
+                recruiterIsActive
+                  ? "bg-accent/10 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]"
+                  : "hover:bg-surface-strong"
+              }`}
+            >
+              <div className="flex items-center gap-2 px-3 py-1.5 lg:px-4">
+                <Link
+                  href="/dashboard/recruiter/search"
+                  prefetch={false}
+                  className={`flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg px-0 py-1.5 text-sm transition-all ${
+                    recruiterIsActive
+                      ? "font-semibold text-accent"
+                      : "font-medium text-muted hover:text-foreground"
+                  }`}
+                  aria-current={recruiterIsActive ? "page" : undefined}
+                >
+                  <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h6m-3 8c4.418 0 8-1.79 8-4V6a2 2 0 00-2-2H8a2 2 0 00-2 2v10c0 2.21 3.582 4 8 4z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 4V2m6 2V2"/></svg>
+                  <span className="truncate">Recruiter</span>
+                </Link>
+                <button
+                  type="button"
+                    aria-label={isRecruiterMenuOpen ? "Collapse recruiter menu" : "Expand recruiter menu"}
+                    aria-expanded={isRecruiterMenuOpen}
+                    onClick={() => setIsRecruiterMenuOpen((value) => !value)}
+                  className={`cursor-pointer rounded-lg p-2 transition ${
+                    recruiterIsActive
+                      ? "text-accent hover:bg-accent/10"
+                      : "text-muted hover:bg-white/5 hover:text-foreground"
+                  }`}
+                >
+                  <svg
+                      className={`h-4 w-4 transition-transform ${isRecruiterMenuOpen ? "rotate-180" : ""}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            {isRecruiterMenuOpen ? (
+              <div className="ml-5 border-l border-white/10 pl-4">
+                <Link
+                  href="/dashboard/recruiter/search"
+                  prefetch={false}
+                  className={`mb-1 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${
+                    activePath.startsWith("/dashboard/recruiter/search")
+                      ? "bg-accent/10 font-semibold text-accent"
+                      : "font-medium text-muted hover:bg-surface-strong hover:text-foreground"
+                  }`}
+                  aria-current={activePath.startsWith("/dashboard/recruiter/search") ? "page" : undefined}
+                >
+                  <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z"/></svg>
+                  <span className="truncate">Candidate Search</span>
+                </Link>
+                <Link
+                  href="/dashboard/recruiter/candidate?id=me"
+                  prefetch={false}
+                  className={`mb-1 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${
+                    activePath.startsWith("/dashboard/recruiter/candidate")
+                      ? "bg-accent/10 font-semibold text-accent"
+                      : "font-medium text-muted hover:bg-surface-strong hover:text-foreground"
+                  }`}
+                  aria-current={activePath.startsWith("/dashboard/recruiter/candidate") ? "page" : undefined}
+                >
+                  <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h6m-3 8c4.418 0 8-1.79 8-4V6a2 2 0 00-2-2H8a2 2 0 00-2 2v10c0 2.21 3.582 4 8 4z"/></svg>
+                  <span className="truncate">Candidate Review</span>
+                </Link>
+                <Link
+                  href="/dashboard/recruiter/public-repos"
+                  prefetch={false}
+                  className={`mb-1 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${
+                    activePath.startsWith("/dashboard/recruiter/public-repos")
+                      ? "bg-accent/10 font-semibold text-accent"
+                      : "font-medium text-muted hover:bg-surface-strong hover:text-foreground"
+                  }`}
+                  aria-current={activePath.startsWith("/dashboard/recruiter/public-repos") ? "page" : undefined}
+                >
+                  <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M10.5 18a7.5 7.5 0 100-15 7.5 7.5 0 000 15z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.5 7.5h.01M9 10.5h3v4.5"/></svg>
+                  <span className="truncate">Public Repo Search</span>
+                </Link>
+                <Link
+                  href="/dashboard/recruiter/extend"
+                  prefetch={false}
+                  className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all ${
+                    activePath.startsWith("/dashboard/recruiter/extend")
+                      ? "bg-accent/10 font-semibold text-accent"
+                      : "font-medium text-muted hover:bg-surface-strong hover:text-foreground"
+                  }`}
+                  aria-current={activePath.startsWith("/dashboard/recruiter/extend") ? "page" : undefined}
+                >
+                  <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7h16M4 12h10M4 17h16"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18 11v6m-3-3h6"/></svg>
+                  <span className="truncate">Recruiter List</span>
+                  {!hasRecruiterBoard ? (
+                    <span className="ml-auto rounded-full border border-white/10 bg-white/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/55">
+                      Empty
+                    </span>
+                  ) : null}
+                </Link>
+              </div>
+            ) : null}
+          </div>
         </nav>
         <div className="border-t border-border/50 p-4">
           <Link
@@ -279,17 +428,47 @@ export default function DashboardLayout({
 
                 <nav className="space-y-1.5">
                   {[
-                    ...dashboardNavItems.map((item) => ({
+                    ...visibleNavItems.map((item) => ({
                       href: item.href,
                       label: item.href === "/submit" ? "Analyze Repo" : item.label,
                       isActive: item.match(activePath),
                     })),
+                    {
+                      href: "/dashboard/recruiter/search",
+                      label: "Recruiter",
+                      isActive: recruiterIsActive,
+                    },
+                    ...(isRecruiterMenuOpen
+                      ? [
+                          {
+                            href: "/dashboard/recruiter/search",
+                            label: "Candidate Search",
+                            isActive: activePath.startsWith("/dashboard/recruiter/search"),
+                          },
+                          {
+                            href: "/dashboard/recruiter/candidate?id=me",
+                            label: "Candidate Review",
+                            isActive: activePath.startsWith("/dashboard/recruiter/candidate"),
+                          },
+                          {
+                            href: "/dashboard/recruiter/public-repos",
+                            label: "Public Repo Search",
+                            isActive: activePath.startsWith("/dashboard/recruiter/public-repos"),
+                          },
+                          {
+                            href: "/dashboard/recruiter/extend",
+                            label: "Recruiter List",
+                            isActive: activePath.startsWith("/dashboard/recruiter/extend"),
+                          },
+                        ]
+                      : []),
                     { href: "/dashboard/profile", label: "Switch Profile", isActive: activePath.startsWith("/dashboard/profile") },
                     { href: "/", label: "Back to Home", isActive: false },
                   ].map((item) => (
                     <Link
                       key={item.href}
                       href={item.href}
+                      prefetch={item.href.startsWith("/dashboard/recruiter") ? false : undefined}
                       onClick={() => setIsMenuOpen(false)}
                       className={`flex items-center justify-between rounded-xl px-3 py-3 text-sm transition-colors ${
                         item.isActive

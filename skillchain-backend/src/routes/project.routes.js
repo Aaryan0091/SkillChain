@@ -17,9 +17,11 @@ const {
   fetchProjectById,
   fetchProjectsForUser,
   fetchOwnedCertificateById,
+  fetchRecruiterCandidateWorkspace,
   finalizeCertificateVerification,
   markAnalysisJob,
   replaceProjectArtifacts,
+  searchRecruiterCandidates,
   updateProjectRecord,
 } = require("../services/project-store.service");
 const { env } = require("../config/env");
@@ -48,6 +50,69 @@ router.get("/", async (req, res) => {
     return res.status(400).json({
       success: false,
       message: error.message || "Could not load projects.",
+    });
+  }
+});
+
+router.get("/recruiter/candidates", async (req, res) => {
+  try {
+    const user = await resolveAuthenticatedUser(req);
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Missing Supabase bearer token. Send Authorization: Bearer <access_token> to search recruiter candidates.",
+      });
+    }
+
+    const candidates = await searchRecruiterCandidates(
+      typeof req.query.search === "string" ? req.query.search : "",
+      Number(req.query.limit || 8),
+      user.id
+    );
+
+    return res.json({
+      success: true,
+      data: candidates,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message || "Could not search recruiter candidates.",
+    });
+  }
+});
+
+router.get("/recruiter/candidates/:userId/projects", async (req, res) => {
+  try {
+    const user = await resolveAuthenticatedUser(req);
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "Missing Supabase bearer token. Send Authorization: Bearer <access_token> to load recruiter candidate projects.",
+      });
+    }
+
+    const workspace = await fetchRecruiterCandidateWorkspace(req.params.userId, user.id);
+
+    if (!workspace) {
+      return res.status(404).json({
+        success: false,
+        message: "Candidate not found.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: workspace,
+    });
+  } catch (error) {
+    return res.status(400).json({
+      success: false,
+      message: error.message || "Could not load recruiter candidate projects.",
     });
   }
 });
@@ -265,6 +330,7 @@ router.post("/", async (req, res) => {
 
   let project;
   let job;
+  let ownership;
 
   try {
     const user = await resolveAuthenticatedUser(req);
@@ -306,23 +372,24 @@ router.post("/", async (req, res) => {
     if (!isRepoOwner && !isContributor) {
       return res.status(403).json({
         success: false,
-        message: `This repository is owned by '${parsedRepo.owner}', and your signed-in GitHub account '${githubUsername}' was not detected as the owner or a listed contributor. Use 'Analyze public repo only' for third-party repositories, or sign in with the GitHub account that owns or contributes to this repository.`,
+        message: `This repository is owned by '${parsedRepo.owner}', and your signed-in GitHub account '${githubUsername}' was not detected as the owner or a listed contributor. You do not own this repository, and you are not listed as a contributor on it. Use 'Analyze public repo only' for third-party repositories, or sign in with the GitHub account that owns or contributes to this repository.`,
       });
     }
 
-    if (
-      isRepoOwner &&
-      githubIdentity.githubUserId &&
-      repoMetadata.owner.id &&
-      githubIdentity.githubUserId !== repoMetadata.owner.id
-    ) {
-      console.warn("[SkillChain] GitHub owner username matched but owner id differed", {
-        repoOwner,
-        repoOwnerId: repoMetadata.owner.id,
-        githubUsername,
-        githubUserId: githubIdentity.githubUserId,
-      });
-    }
+    ownership = isRepoOwner
+      ? {
+          mode: "owner",
+          repoOwner,
+          githubUsername,
+          message:
+            "This repository is owned by your signed-in GitHub account, so it can be added to your SkillChain profile as your own project.",
+        }
+      : {
+          mode: "contributor",
+          repoOwner,
+          githubUsername,
+          message: `This repository is owned by '${repoOwner}', not by your signed-in GitHub account '${githubUsername}'. You were detected as a listed contributor, so SkillChain can save it to your profile, but it should be understood as a contributor-linked project rather than a repo you own.`,
+        };
 
     project = await createProjectRecord({
       userId: user.id,
@@ -380,6 +447,7 @@ router.post("/", async (req, res) => {
         project: storedProject,
         certificate: finalizedCertificate,
         analysis,
+        ownership,
       },
     });
   } catch (error) {
