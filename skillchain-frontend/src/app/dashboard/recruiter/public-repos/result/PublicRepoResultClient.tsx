@@ -22,6 +22,7 @@ import {
   pushRecruiterRecentSearch,
   type PublicRepoAnalysis,
 } from "@/lib/recruiter-public-repos";
+import { friendlyErrorMessage } from "@/lib/user-facing-errors";
 
 type PublicRepoResultClientProps = {
   recruiterId: string;
@@ -38,7 +39,7 @@ function normalizeErrorMessage(message: string) {
     return "SkillChain could not read that repository. Recheck the URL and make sure it is public.";
   }
 
-  return message;
+  return friendlyErrorMessage(message, "Could not load recruiter repo analysis.");
 }
 
 function scoreLabel(label: string) {

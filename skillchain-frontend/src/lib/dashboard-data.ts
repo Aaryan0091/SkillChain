@@ -1,5 +1,6 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
+import { e2eProjects, isE2ETestMode } from "@/lib/e2e-fixtures";
 
 export type MetricRecord = {
   files: number | null;
@@ -14,6 +15,20 @@ export type MetricRecord = {
       frontendFiles?: number;
     };
     frameworks?: string[];
+    packageNames?: string[];
+    signals?: Record<string, boolean>;
+    readme?: {
+      score?: number;
+      words?: number;
+      lines?: number;
+      hasSetupInstructions?: boolean;
+    };
+    selectedFiles?: {
+      path?: string;
+      kind?: string;
+      size?: number;
+    }[];
+    treeTruncated?: boolean;
     summary?: string;
   } | null;
 };
@@ -31,6 +46,20 @@ export type ScoreRecord = {
     strengths?: string[];
     risks?: string[];
     skillEvidence?: string[];
+    projectType?: string;
+    architectureSummary?: string;
+    scoreEvidenceDetails?: Record<
+      string,
+      {
+        signals?: string[];
+        files?: {
+          path?: string;
+          kind?: string;
+          size?: number;
+        }[];
+        notes?: string[];
+      }
+    >;
   } | null;
 };
 
@@ -93,6 +122,10 @@ export type CertificateWithProjectRecord = CertificateRecord & {
 
 export async function fetchDashboardProjects(userId?: string) {
   noStore();
+
+  if (isE2ETestMode) {
+    return e2eProjects;
+  }
 
   const supabase = await createClient();
   let query = supabase

@@ -12,13 +12,12 @@ import {
   FileSearch,
   Fingerprint,
   ListChecks,
-  Search,
   ShieldCheck,
   Sparkles,
   TrendingUp,
-  UserRoundSearch,
 } from "lucide-react";
 import EmptyStateCard from "@/components/EmptyStateCard";
+import RecruiterCandidateSelector from "@/components/recruiter/RecruiterCandidateSelector";
 import StatePanel from "@/components/StatePanel";
 import {
   resolveCertificateVerification,
@@ -37,8 +36,16 @@ import {
   createCustomRecruiterRole,
   recruiterRolePresets,
 } from "@/lib/recruiter-fit";
-import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
-import { createClient } from "@/utils/supabase/client";
+import {
+  aggregateCounts,
+  fetchProjectsClient,
+  isRecruiterReadyProject,
+  repoLabel,
+  scoreAverage,
+  searchCandidatesClient,
+  type RecruiterCandidate,
+} from "@/lib/recruiter-client-data";
+import { getErrorMessage } from "@/lib/user-facing-errors";
 
 type RecruiterClientProps = {
   initialProjects?: DashboardProjectRecord[];
@@ -46,17 +53,6 @@ type RecruiterClientProps = {
   viewerLabel: string;
   candidateId?: string;
   showCandidateSelector?: boolean;
-};
-
-type RecruiterCandidate = {
-  id: string;
-  email: string | null;
-  handle: string;
-  label: string;
-  projectCount: number;
-  verifiedCertificateCount: number;
-  primaryCertificateId?: string | null;
-  isCurrentUser?: boolean;
 };
 
 type RecruiterProjectFitCard = {
@@ -67,126 +63,6 @@ type RecruiterProjectFitCard = {
   missingSignals: string[];
   recommendation: "Strong fit" | "Possible fit" | "Weak fit";
 };
-
-function repoLabel(project: DashboardProjectRecord) {
-  if (project.repo_name?.trim()) return project.repo_name;
-
-  try {
-    const url = new URL(project.repo_url);
-    return url.pathname.replace(/^\/+/, "") || project.repo_url;
-  } catch {
-    return project.repo_url;
-  }
-}
-
-function scoreAverage(project: DashboardProjectRecord) {
-  return (
-    averageNumbers([
-      project.scores?.[0]?.backend_score,
-      project.scores?.[0]?.architecture_score,
-      project.scores?.[0]?.documentation_score,
-      project.scores?.[0]?.confidence_score,
-      project.scores?.[0]?.score_breakdown_json?.frontend ?? null,
-      project.scores?.[0]?.score_breakdown_json?.codeQuality ?? null,
-      project.scores?.[0]?.score_breakdown_json?.security ?? null,
-    ]) ?? 0
-  );
-}
-
-function aggregateCounts(items: string[]) {
-  const counts = new Map<string, number>();
-  for (const item of items) {
-    const trimmed = item?.trim();
-    if (!trimmed) continue;
-    counts.set(trimmed, (counts.get(trimmed) || 0) + 1);
-  }
-  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1]);
-}
-
-function isRecruiterReadyProject(project: DashboardProjectRecord) {
-  return (
-    project.analysis_status === "completed" ||
-    Boolean(project.scores?.length) ||
-    Boolean(project.metrics?.length) ||
-    Boolean(project.certificates?.length)
-  );
-}
-
-async function fetchProjectsClient(candidateId?: string, signal?: AbortSignal) {
-  const supabase = createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.access_token) {
-    throw new Error("Please sign in again to load recruiter project data.");
-  }
-
-  const endpoint = candidateId
-    ? `/projects/recruiter/candidates/${candidateId}/projects`
-    : "/projects";
-  const response = await fetch(buildSkillchainApiUrl(endpoint), {
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-    },
-    cache: "no-store",
-    signal,
-  });
-
-  const result = await response.json();
-
-  if (!response.ok || !result.success) {
-    throw new Error(result.message || "Could not load recruiter project data.");
-  }
-
-  if (candidateId) {
-    return result.data as {
-      candidate: RecruiterCandidate;
-      projects: DashboardProjectRecord[];
-    };
-  }
-
-  return {
-    candidate: null,
-    projects: (result.data || []) as DashboardProjectRecord[],
-  };
-}
-
-async function searchCandidatesClient(searchTerm: string, signal?: AbortSignal) {
-  const supabase = createClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session?.access_token) {
-    throw new Error("Please sign in again to search candidate profiles.");
-  }
-
-  const params = new URLSearchParams();
-  if (searchTerm.trim()) {
-    params.set("search", searchTerm.trim());
-  }
-  params.set("limit", "8");
-
-  const response = await fetch(
-    buildSkillchainApiUrl(`/projects/recruiter/candidates?${params.toString()}`),
-    {
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      cache: "no-store",
-      signal,
-    }
-  );
-
-  const result = await response.json();
-
-  if (!response.ok || !result.success) {
-    throw new Error(result.message || "Could not search candidate profiles.");
-  }
-
-  return (result.data || []) as RecruiterCandidate[];
-}
 
 export default function RecruiterClient({
   initialProjects = [],
@@ -247,11 +123,7 @@ export default function RecruiterClient({
           if (!hasInitialProjects) {
             setProjects([]);
           }
-          setLoadError(
-            error instanceof Error
-              ? error.message
-              : "Could not load recruiter view data."
-          );
+          setLoadError(getErrorMessage(error, "Could not load recruiter view data."));
           setIsLoading(false);
         });
       });
@@ -288,11 +160,7 @@ export default function RecruiterClient({
           if (!isActive) return;
           startTransition(() => {
             setCandidateResults([]);
-            setCandidateSearchError(
-              error instanceof Error
-                ? error.message
-                : "Could not search candidate profiles."
-            );
+            setCandidateSearchError(getErrorMessage(error, "Could not search candidate profiles."));
             setIsCandidateSearchLoading(false);
           });
         });
@@ -511,159 +379,16 @@ export default function RecruiterClient({
         </header>
 
         {showCandidateSelector ? (
-        <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <article className="rounded-[2rem] border border-border/70 bg-surface/40 p-6 shadow-sm backdrop-blur-xl">
-            <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#a8f5e9]/20 bg-[#a8f5e9]/10 text-[#a8f5e9]">
-                <UserRoundSearch className="h-5 w-5" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-accent">
-                  Candidate selector
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">
-                  Choose whose profile to review
-                </h2>
-                <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted">
-                  Search a saved candidate by email or handle, then switch the recruiter analysis to that person’s saved projects. Your own profile stays available as the default option.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-              <div>
-                <label
-                  htmlFor="candidate-search"
-                  className="text-xs font-semibold uppercase tracking-[0.16em] text-white/55"
-                >
-                  Search saved candidates
-                </label>
-                <div className="relative mt-2">
-                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
-                  <input
-                    id="candidate-search"
-                    type="text"
-                    value={candidateSearch}
-                    onChange={(event) => setCandidateSearch(event.target.value)}
-                    placeholder="Search by email or profile handle"
-                    className="w-full rounded-[1.2rem] border border-white/10 bg-background/55 py-3 pl-11 pr-4 text-sm text-white outline-none transition focus:border-[#a8f5e9]/35 focus:ring-2 focus:ring-[#a8f5e9]/15"
-                  />
-                </div>
-                {candidateSearchError ? (
-                  <p className="mt-3 text-sm text-amber-300">{candidateSearchError}</p>
-                ) : null}
-                <div className="mt-4 grid gap-3">
-                  {candidateResults.map((candidate) => (
-                    <article
-                      key={candidate.id}
-                      className={`rounded-[1.25rem] border p-4 transition ${
-                        activeCandidate.id === candidate.id
-                          ? "border-[#a8f5e9]/40 bg-[#a8f5e9]/10"
-                          : "border-white/10 bg-background/35 hover:border-white/20 hover:bg-background/45"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-white">
-                            {candidate.label}
-                          </p>
-                          <p className="mt-1 truncate text-xs text-white/45">
-                            @{candidate.handle}
-                            {candidate.email ? ` • ${candidate.email}` : ""}
-                          </p>
-                        </div>
-                        {candidate.isCurrentUser ? (
-                          <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/70">
-                            You
-                          </span>
-                        ) : null}
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                        <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
-                          {candidate.projectCount} project{candidate.projectCount === 1 ? "" : "s"}
-                        </span>
-                        <span className="rounded-full border border-[#a8f5e9]/20 bg-[#a8f5e9]/10 px-3 py-1 text-[#a8f5e9]">
-                          {candidate.verifiedCertificateCount} verified cert{candidate.verifiedCertificateCount === 1 ? "" : "s"}
-                        </span>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setActiveCandidate(candidate)}
-                          className="inline-flex cursor-pointer items-center rounded-full border border-[#a8f5e9]/30 bg-[#a8f5e9]/10 px-3 py-1.5 text-xs font-semibold text-[#a8f5e9] transition hover:border-[#a8f5e9]/50 hover:bg-[#a8f5e9]/16"
-                        >
-                          Select candidate
-                        </button>
-                        {candidate.primaryCertificateId ? (
-                          <Link
-                            href={`/verify/profile/${candidate.primaryCertificateId}`}
-                            prefetch={false}
-                            className="inline-flex cursor-pointer items-center rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-white/75 transition hover:bg-white/10 hover:text-white"
-                          >
-                            Public summary
-                          </Link>
-                        ) : null}
-                      </div>
-                    </article>
-                  ))}
-                  {isCandidateSearchLoading ? (
-                    <p className="text-sm text-muted">Searching saved candidates...</p>
-                  ) : null}
-                  {!isCandidateSearchLoading && !candidateResults.length ? (
-                    <p className="text-sm text-muted">
-                      No saved candidates match this search yet.
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="rounded-[1.25rem] border border-white/10 bg-background/35 p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#a8f5e9]">
-                  Current candidate
-                </p>
-                {activeCandidateProfileHref ? (
-                  <Link
-                    href={activeCandidateProfileHref}
-                    className="mt-2 inline-flex cursor-pointer items-center gap-2 text-xl font-semibold text-white transition hover:text-[#a8f5e9]"
-                  >
-                    {activeCandidate.label}
-                    <ArrowUpRight className="h-4 w-4" />
-                  </Link>
-                ) : (
-                  <h3 className="mt-2 text-xl font-semibold text-white">
-                    {activeCandidate.label}
-                  </h3>
-                )}
-                <p className="mt-1 text-sm text-white/55">
-                  {activeCandidateProfileHref ? (
-                    <Link
-                      href={activeCandidateProfileHref}
-                      className="cursor-pointer transition hover:text-[#a8f5e9]"
-                    >
-                      @{activeCandidate.handle}
-                    </Link>
-                  ) : (
-                    `@${activeCandidate.handle}`
-                  )}
-                  {activeCandidate.email ? ` • ${activeCandidate.email}` : ""}
-                </p>
-                <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
-                    {activeCandidate.projectCount} project{activeCandidate.projectCount === 1 ? "" : "s"}
-                  </span>
-                  <span className="rounded-full border border-[#a8f5e9]/20 bg-[#a8f5e9]/10 px-3 py-1 text-[#a8f5e9]">
-                    {activeCandidate.verifiedCertificateCount} verified cert{activeCandidate.verifiedCertificateCount === 1 ? "" : "s"}
-                  </span>
-                  {activeCandidate.isCurrentUser ? (
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/70">
-                      You
-                    </span>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          </article>
-        </section>
+          <RecruiterCandidateSelector
+            candidateSearch={candidateSearch}
+            candidateSearchError={candidateSearchError}
+            candidateResults={candidateResults}
+            activeCandidate={activeCandidate}
+            activeCandidateProfileHref={activeCandidateProfileHref}
+            isCandidateSearchLoading={isCandidateSearchLoading}
+            onSearchChange={setCandidateSearch}
+            onSelectCandidate={setActiveCandidate}
+          />
         ) : (
           <section className="rounded-[1rem] border border-white/10 bg-surface/40 p-4 shadow-sm backdrop-blur-xl">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

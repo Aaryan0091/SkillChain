@@ -2,6 +2,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 import { cache } from 'react'
 import type { User } from '@supabase/supabase-js'
+import { e2eUser, isE2ETestMode } from '@/lib/e2e-fixtures'
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -38,6 +39,10 @@ export async function createClient() {
 }
 
 const getCachedUser = cache(async (): Promise<User | null> => {
+  if (isE2ETestMode) {
+    return e2eUser
+  }
+
   const supabase = await createClient()
   const {
     data: { user },

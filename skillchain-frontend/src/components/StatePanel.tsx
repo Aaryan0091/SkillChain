@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { LucideIcon } from "lucide-react";
 import {
   AlertTriangle,
@@ -62,11 +63,15 @@ export default function StatePanel({
   title,
   message,
   className = "",
+  actionHref,
+  actionLabel,
 }: {
   variant: StatePanelVariant;
   title: string;
   message: string;
   className?: string;
+  actionHref?: string;
+  actionLabel?: string;
 }) {
   const styles = variantStyles[variant];
   const Icon = styles.icon;
@@ -84,6 +89,14 @@ export default function StatePanel({
         <div className="min-w-0">
           <p className={`text-sm font-semibold ${styles.title}`}>{title}</p>
           <p className={`mt-1 text-sm leading-relaxed ${styles.body}`}>{message}</p>
+          {actionHref && actionLabel ? (
+            <Link
+              href={actionHref}
+              className="mt-3 inline-flex cursor-pointer items-center rounded-full border border-white/10 bg-white/10 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-white/15"
+            >
+              {actionLabel}
+            </Link>
+          ) : null}
         </div>
       </div>
     </div>

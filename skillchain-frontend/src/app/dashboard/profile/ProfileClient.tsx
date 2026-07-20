@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import StatePanel from "@/components/StatePanel";
+import { signOutCompletely } from "@/lib/auth-session";
 import { 
   ShieldCheck, GitCommit, Award, Terminal, 
   Activity, Code, Calendar, Clock, 
@@ -35,7 +37,6 @@ interface ProfileClientProps {
     color: string;
   }>;
   loadError: string | null;
-  signOutAction: () => Promise<void>;
 }
 
 export default function ProfileClient({
@@ -43,8 +44,8 @@ export default function ProfileClient({
   profileStats,
   verifiedSkills,
   loadError,
-  signOutAction,
 }: ProfileClientProps) {
+  const router = useRouter();
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -317,7 +318,7 @@ export default function ProfileClient({
           <motion.div variants={item} className="flex justify-end pt-2">
             <button
               onClick={async () => {
-                await signOutAction();
+                await signOutCompletely(router);
               }}
               className="group relative flex items-center gap-2 overflow-hidden rounded-xl bg-red-500/10 border border-red-500/20 px-6 py-3 text-sm font-bold text-red-400 transition-all hover:bg-red-500 hover:text-white hover:shadow-[0_0_20px_rgba(239,68,68,0.4)]"
             >

@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import BackButton from "@/components/BackButton";
+import { hasIntentionalLogout, signOutCompletely } from "@/lib/auth-session";
 import { readStoredDecisionBoard } from "@/lib/recruiter-board";
 import { createClient } from "@/utils/supabase/client";
 
@@ -117,6 +118,11 @@ export default function DashboardLayout({
     let isActive = true;
 
     const checkUser = async () => {
+      if (hasIntentionalLogout()) {
+        router.replace("/login?logged_out=1");
+        return;
+      }
+
       const {
         data: { user: authenticatedUser },
       } = await supabase.auth.getUser();
@@ -138,6 +144,11 @@ export default function DashboardLayout({
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!isActive) return;
+
+      if (hasIntentionalLogout()) {
+        router.replace("/login?logged_out=1");
+        return;
+      }
 
       if (!session) {
         router.replace("/login");
@@ -216,10 +227,8 @@ export default function DashboardLayout({
       : "Back to Overview";
 
   const handleSignOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
     setIsMenuOpen(false);
-    router.replace("/login");
+    await signOutCompletely(router);
   };
 
   return (

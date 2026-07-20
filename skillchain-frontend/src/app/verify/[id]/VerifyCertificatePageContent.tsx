@@ -1,6 +1,7 @@
 import Link from "next/link";
 import BackButton from "@/components/BackButton";
 import PublicCertificateTools from "@/components/PublicCertificateTools";
+import ScoreEvidenceAudit from "@/components/ScoreEvidenceAudit";
 import VerificationStatusLegend from "@/components/VerificationStatusLegend";
 import {
   Activity,
@@ -18,6 +19,7 @@ import {
 } from "lucide-react";
 import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
 import { resolveCertificateVerification } from "@/lib/certificate-verification";
+import { getE2ECertificate, isE2ETestMode } from "@/lib/e2e-fixtures";
 
 type MetricRecord = {
   files: number | null;
@@ -180,6 +182,10 @@ function username(project: ProjectRelation | null) {
 }
 
 async function fetchCertificate(certificateId: string) {
+  if (isE2ETestMode) {
+    return getE2ECertificate(certificateId) as CertificateRecord | null;
+  }
+
   const response = await fetch(buildSkillchainApiUrl(`/verify/${certificateId}`), {
     cache: "no-store",
   });
@@ -578,6 +584,8 @@ export default async function VerifyCertificatePageContent({
                 ))}
               </ul>
             </section>
+
+            <ScoreEvidenceAudit metric={metrics} score={score} compact />
 
             <section className="rounded-[2rem] border border-border/80 bg-surface/50 p-6 shadow-sm backdrop-blur-md">
               <h2 className="mb-5 flex items-center gap-2 text-xl font-semibold tracking-tight text-foreground">

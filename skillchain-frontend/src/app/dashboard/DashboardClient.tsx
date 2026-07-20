@@ -21,6 +21,7 @@ import { statusTone } from "@/lib/status";
 import { createClient } from "@/utils/supabase/client";
 import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
 import { resolveCertificateVerification } from "@/lib/certificate-verification";
+import { getErrorMessage } from "@/lib/user-facing-errors";
 import type { ProjectRecord as DashboardProjectRecord } from "@/lib/dashboard-data";
 
 type MetricRecord = {
@@ -198,11 +199,7 @@ export default function DashboardClient({
           if (!hasInitialProjects) {
             setProjects([]);
           }
-          setLoadError(
-            error instanceof Error
-              ? error.message
-              : "Could not load dashboard projects."
-          );
+          setLoadError(getErrorMessage(error, "Could not load dashboard projects."));
           setIsLoading(false);
         });
       });
@@ -384,6 +381,8 @@ export default function DashboardClient({
                   variant="error"
                   title="Could not refresh dashboard data"
                   message={loadError}
+                  actionHref="/dashboard/submit"
+                  actionLabel="Analyze a repo"
                 />
               ) : null}
             </div>
@@ -525,6 +524,8 @@ export default function DashboardClient({
                   variant="error"
                   title="Project action failed"
                   message={actionError}
+                  actionHref="/dashboard/projects"
+                  actionLabel="Open projects"
                 />
               </div>
             ) : null}

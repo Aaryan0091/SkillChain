@@ -11,9 +11,11 @@
     "frontend": "npm run dev --prefix skillchain-frontend",
     "backend": "npm run dev --prefix skillchain-backend",
     "build": "npm run build --prefix skillchain-frontend",
-    "lint": "npm run lint --prefix skillchain-frontend"
+    "lint": "npm run lint --prefix skillchain-frontend",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "concurrently": "^9.2.1"
   }
 }

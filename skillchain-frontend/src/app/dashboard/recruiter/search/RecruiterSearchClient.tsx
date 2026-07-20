@@ -14,6 +14,7 @@ import {
 import EmptyStateCard from "@/components/EmptyStateCard";
 import StatePanel from "@/components/StatePanel";
 import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
+import { getErrorMessage } from "@/lib/user-facing-errors";
 import { createClient } from "@/utils/supabase/client";
 
 type RecruiterCandidate = {
@@ -91,11 +92,7 @@ export default function RecruiterSearchClient({ viewerId }: { viewerId: string }
           if (!isActive) return;
           startTransition(() => {
             setCandidates([]);
-            setError(
-              caughtError instanceof Error
-                ? caughtError.message
-                : "Could not search candidates."
-            );
+            setError(getErrorMessage(caughtError, "Could not search candidates."));
             setIsLoading(false);
           });
         });

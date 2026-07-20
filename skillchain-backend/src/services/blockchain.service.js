@@ -21,25 +21,30 @@ function getProvider() {
 
   const chainId = Number(env.blockchainChainId || "0");
   return chainId
-    ? new JsonRpcProvider(env.blockchainRpcUrl, chainId)
+    ? new JsonRpcProvider(env.blockchainRpcUrl, chainId, { staticNetwork: true })
     : new JsonRpcProvider(env.blockchainRpcUrl);
 }
 
-function getWallet() {
+function getWalletForProvider(provider) {
   if (!env.blockchainPrivateKey) {
     throw new Error("Missing BLOCKCHAIN_PRIVATE_KEY.");
   }
 
-  return new Wallet(env.blockchainPrivateKey, getProvider());
+  return new Wallet(env.blockchainPrivateKey, provider);
 }
 
-function getRegistryContract() {
+function getRegistryContract(wallet) {
   if (!env.blockchainContractAddress) {
     throw new Error("Missing BLOCKCHAIN_CONTRACT_ADDRESS.");
   }
 
-  const wallet = getWallet();
   return new Contract(env.blockchainContractAddress, skillchainRegistryAbi, wallet);
+}
+
+function destroyProvider(provider) {
+  if (typeof provider?.destroy === "function") {
+    provider.destroy();
+  }
 }
 
 function normalizeHashData(certificateHash) {
@@ -60,89 +65,104 @@ function normalizeHashData(certificateHash) {
 }
 
 async function anchorCertificateHash({ certificateId, certificateHash }) {
-  const wallet = getWallet();
   const provider = getProvider();
-  const network = await provider.getNetwork();
-  const data = normalizeHashData(certificateHash);
-  let tx;
-  let targetAddress;
-  let mode;
+  try {
+    const wallet = getWalletForProvider(provider);
+    const network = await provider.getNetwork();
+    const data = normalizeHashData(certificateHash);
+    let tx;
+    let targetAddress;
+    let mode;
 
-  if (env.blockchainContractAddress) {
-    if (!certificateId) {
-      throw new Error(
-        "Certificate id is required when anchoring through the SkillChain registry contract."
-      );
+    if (env.blockchainContractAddress) {
+      if (!certificateId) {
+        throw new Error(
+          "Certificate id is required when anchoring through the SkillChain registry contract."
+        );
+      }
+
+      const contract = getRegistryContract(wallet);
+      tx = await contract.anchorCertificate(certificateId, data);
+      targetAddress = env.blockchainContractAddress;
+      mode = "smart_contract_registry";
+    } else {
+      targetAddress = env.issuerWalletAddress || wallet.address;
+      tx = await wallet.sendTransaction({
+        to: targetAddress,
+        data,
+        value: 0n,
+      });
+      mode = "trusted_chain_record";
     }
 
-    const contract = getRegistryContract();
-    tx = await contract.anchorCertificate(certificateId, data);
-    targetAddress = env.blockchainContractAddress;
-    mode = "smart_contract_registry";
-  } else {
-    targetAddress = env.issuerWalletAddress || wallet.address;
-    tx = await wallet.sendTransaction({
-      to: targetAddress,
-      data,
-      value: 0n,
-    });
-    mode = "trusted_chain_record";
-  }
+    const receipt = await tx.wait();
 
-  const receipt = await tx.wait();
-
-  if (!receipt) {
-    throw new Error("Blockchain transaction was sent but no receipt was returned.");
-  }
-
-  return {
-    transactionHash: receipt.hash,
-    chainId: String(network.chainId),
-    anchorAddress: targetAddress,
-    mode,
-  };
-}
-
-async function readAnchoredHash({ certificateId, transactionHash }) {
-  if (env.blockchainContractAddress) {
-    if (!certificateId) {
-      throw new Error(
-        "Certificate id is required to read an anchored certificate hash from the contract."
-      );
-    }
-
-    const contract = getRegistryContract();
-    const anchoredHash = await contract.getCertificateHash(certificateId);
-
-    if (!anchoredHash || /^0x0+$/.test(String(anchoredHash))) {
-      throw new Error("No anchored certificate hash was found in the contract.");
+    if (!receipt) {
+      throw new Error("Blockchain transaction was sent but no receipt was returned.");
     }
 
     return {
-      anchoredHash: String(anchoredHash).replace(/^0x/, "").toLowerCase(),
-      to: env.blockchainContractAddress,
-      hash: transactionHash || null,
-      mode: "smart_contract_registry",
+      transactionHash: receipt.hash,
+      chainId: String(network.chainId),
+      anchorAddress: targetAddress,
+      mode,
     };
+  } finally {
+    destroyProvider(provider);
+  }
+}
+
+async function readAnchoredHash({ certificateId, transactionHash }) {
+  const provider = getProvider();
+
+  if (env.blockchainContractAddress) {
+    try {
+      if (!certificateId) {
+        throw new Error(
+          "Certificate id is required to read an anchored certificate hash from the contract."
+        );
+      }
+
+      const wallet = getWalletForProvider(provider);
+      const contract = getRegistryContract(wallet);
+      const anchoredHash = await contract.getCertificateHash(certificateId);
+
+      if (!anchoredHash || /^0x0+$/.test(String(anchoredHash))) {
+        throw new Error("No anchored certificate hash was found in the contract.");
+      }
+
+      return {
+        anchoredHash: String(anchoredHash).replace(/^0x/, "").toLowerCase(),
+        to: env.blockchainContractAddress,
+        hash: transactionHash || null,
+        mode: "smart_contract_registry",
+      };
+    } finally {
+      destroyProvider(provider);
+    }
   }
 
   if (!transactionHash) {
+    destroyProvider(provider);
     throw new Error("Transaction hash is required to read the anchored certificate hash.");
   }
 
-  const provider = getProvider();
-  const tx = await provider.getTransaction(transactionHash);
+  try {
+    const tx = await provider.getTransaction(transactionHash);
 
-  if (!tx) {
-    throw new Error("Blockchain transaction could not be found.");
+    if (!tx) {
+      throw new Error("Blockchain transaction could not be found.");
+    }
+
+    return {
+      anchoredHash: (tx.data || "0x").replace(/^0x/, "").toLowerCase(),
+      to: tx.to || null,
+      hash: tx.hash,
+      mode: "trusted_chain_record",
+    };
+  } finally {
+    destroyProvider(provider);
   }
-
-  return {
-    anchoredHash: (tx.data || "0x").replace(/^0x/, "").toLowerCase(),
-    to: tx.to || null,
-    hash: tx.hash,
-    mode: "trusted_chain_record",
-  };
 }
 
 module.exports = {

@@ -20,6 +20,7 @@ import type { ProjectRecord } from "@/lib/dashboard-data";
 import { formatLongDate } from "@/lib/formatting";
 import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
 import { statusTone } from "@/lib/status";
+import { getErrorMessage } from "@/lib/user-facing-errors";
 import { createClient } from "@/utils/supabase/client";
 
 function repoLabel(project: ProjectRecord) {
@@ -146,7 +147,7 @@ export default function ProjectsClient({
           if (!hasInitialProjects) {
             setProjects([]);
           }
-          setLoadError(error instanceof Error ? error.message : "Could not load projects.");
+          setLoadError(getErrorMessage(error, "Could not load projects."));
           setIsLoading(false);
         });
       });
@@ -211,6 +212,8 @@ export default function ProjectsClient({
             variant="error"
             title="Could not load projects"
             message={loadError}
+            actionHref="/dashboard/submit"
+            actionLabel="Analyze a repository"
           />
         ) : null}
         {actionError ? (
@@ -218,6 +221,8 @@ export default function ProjectsClient({
             variant="error"
             title="Project action failed"
             message={actionError}
+            actionHref="/dashboard"
+            actionLabel="Back to Overview"
           />
         ) : null}
       </section>

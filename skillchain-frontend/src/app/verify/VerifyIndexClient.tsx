@@ -17,6 +17,7 @@ import StatePanel from "@/components/StatePanel";
 import VerificationStatusLegend from "@/components/VerificationStatusLegend";
 import { resolveCertificateVerification } from "@/lib/certificate-verification";
 import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
+import { getErrorMessage } from "@/lib/user-facing-errors";
 import { VerifySearchFormInner } from "./VerifySearchForm";
 
 type PublicCertificateRecord = {
@@ -110,11 +111,7 @@ export default function VerifyIndexClient({
         if (!isActive) return;
         startTransition(() => {
           setCertificates([]);
-          setLoadError(
-            error instanceof Error
-              ? error.message
-              : "Could not load public certificates."
-          );
+          setLoadError(getErrorMessage(error, "Could not load public certificates."));
           setIsLoading(false);
         });
       });
@@ -229,6 +226,8 @@ export default function VerifyIndexClient({
             variant="error"
             title="Could not load public certificates"
             message={loadError}
+            actionHref="/dashboard/verify"
+            actionLabel="Open verify hub"
           />
         ) : null}
 

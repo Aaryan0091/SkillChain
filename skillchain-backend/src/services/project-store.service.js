@@ -5,6 +5,7 @@ const {
   isBlockchainConfigured,
   readAnchoredHash,
 } = require("./blockchain.service");
+const { buildScoreEvidenceDetails } = require("./score-evidence.service");
 
 function hashCertificatePayload(payload) {
   return crypto
@@ -54,7 +55,9 @@ function buildMetricsPayload(analysis) {
       frameworks: deterministic.frameworks,
       packageNames: deterministic.packageNames,
       signals: deterministic.signals,
+      readme: deterministic.readme,
       selectedFiles: basis.selectedFiles,
+      treeTruncated: basis.treeTruncated,
       summary: analysis.summary,
     },
   };
@@ -76,6 +79,9 @@ function buildScoresPayload(analysis) {
       strengths: analysis.nlp.strengths,
       risks: analysis.nlp.risks,
       skillEvidence: analysis.nlp.skillEvidence,
+      projectType: analysis.nlp.projectType,
+      architectureSummary: analysis.nlp.architectureSummary,
+      scoreEvidenceDetails: buildScoreEvidenceDetails(analysis),
     },
   };
 }
@@ -296,6 +302,34 @@ async function deleteProjectRecord(projectId) {
   if (projectError) {
     throw new Error(`Failed to delete project: ${projectError.message}`);
   }
+}
+
+async function deleteAccountRecords(userId) {
+  const supabase = getSupabaseAdminClient();
+  const projects = await fetchProjectsForUser(userId);
+
+  for (const project of projects) {
+    await deleteProjectRecord(project.id);
+  }
+
+  const { error: userRowError } = await supabase
+    .from("users")
+    .delete()
+    .eq("id", userId);
+
+  if (userRowError) {
+    throw new Error(`Failed to delete user profile row: ${userRowError.message}`);
+  }
+
+  const { error: authError } = await supabase.auth.admin.deleteUser(userId);
+
+  if (authError) {
+    throw new Error(`Failed to delete Supabase auth user: ${authError.message}`);
+  }
+
+  return {
+    deletedProjects: projects.length,
+  };
 }
 
 async function replaceProjectArtifacts({ projectId, userId, analysis, frontendUrl }) {
@@ -886,6 +920,10 @@ function resolveBlockchainFailureState(error, hasBlockchainReference) {
     normalized.includes("transaction could not be found") ||
     normalized.includes("timeout") ||
     normalized.includes("network") ||
+    normalized.includes("getaddrinfo") ||
+    normalized.includes("enotfound") ||
+    normalized.includes("eai_again") ||
+    normalized.includes("dns") ||
     normalized.includes("nonce") ||
     normalized.includes("replacement fee too low") ||
     normalized.includes("underpriced") ||
@@ -1057,6 +1095,7 @@ module.exports = {
   markAnalysisJob,
   replaceProjectArtifacts,
   searchRecruiterCandidates,
+  deleteAccountRecords,
   deleteProjectRecord,
   updateCertificateRecord,
   updateProjectRecord,

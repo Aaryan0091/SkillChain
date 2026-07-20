@@ -21,12 +21,15 @@ import {
 } from "lucide-react";
 import ConfirmModal from "@/components/ConfirmModal";
 import EmptyStateCard from "@/components/EmptyStateCard";
+import LoadingStateCard from "@/components/LoadingStateCard";
+import ScoreEvidenceAudit from "@/components/ScoreEvidenceAudit";
 import StatePanel from "@/components/StatePanel";
 import VerificationStatusLegend from "@/components/VerificationStatusLegend";
 import { averageNumbers, formatDateTime, formatLongDate, titleCase } from "@/lib/formatting";
 import { statusTone } from "@/lib/status";
 import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
 import { resolveCertificateVerification } from "@/lib/certificate-verification";
+import { getErrorMessage } from "@/lib/user-facing-errors";
 import { createClient } from "@/utils/supabase/client";
 
 type MetricRecord = {
@@ -221,8 +224,7 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
       .catch((error) => {
         if (!isActive) return;
 
-        const message =
-          error instanceof Error ? error.message : "Could not load project.";
+        const message = getErrorMessage(error, "Could not load project.");
 
         if (message.includes("sign in again")) {
           router.replace("/login");
@@ -244,18 +246,10 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
   if (isLoading) {
     return (
       <main className="w-full px-4 pb-12 pt-4 sm:px-6 sm:pb-14 lg:px-8 lg:pb-16">
-        <section className="overflow-hidden rounded-[2.5rem] border border-border/70 bg-surface/50 p-6 shadow-[0_24px_70px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
-          <div className="animate-pulse space-y-4">
-            <div className="h-5 w-40 rounded-full bg-white/10" />
-            <div className="h-10 w-full max-w-2xl rounded-2xl bg-white/10" />
-            <div className="h-5 w-full max-w-xl rounded-full bg-white/8" />
-            <div className="grid gap-4 md:grid-cols-3">
-              {[0, 1, 2].map((item) => (
-                <div key={item} className="h-32 rounded-[1.5rem] bg-white/8" />
-              ))}
-            </div>
-          </div>
-        </section>
+        <LoadingStateCard
+          title="Opening project proof"
+          message="Loading the saved project, score evidence, certificate record, and analysis timeline."
+        />
       </main>
     );
   }
@@ -268,6 +262,7 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
           message={loadError || "The requested project could not be found for your account."}
           actionHref="/dashboard"
           actionLabel="Back to Overview"
+          eyebrow="Project unavailable"
         />
       </main>
     );
@@ -555,6 +550,8 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
               ))}
             </div>
           </section>
+
+          <ScoreEvidenceAudit metric={metric} score={score} />
 
           <section className="rounded-[2rem] border border-border/70 bg-surface/40 p-6 shadow-sm backdrop-blur-xl">
             <h2 className="flex items-center gap-2 text-xl font-semibold tracking-tight text-white">

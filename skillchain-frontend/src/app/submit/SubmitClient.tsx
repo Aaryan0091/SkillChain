@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import StatePanel from "@/components/StatePanel";
 import VerificationStatusLegend from "@/components/VerificationStatusLegend";
 import { getPublicEnv } from "@/lib/env";
+import { friendlyErrorMessage } from "@/lib/user-facing-errors";
 import { createClient } from "@/utils/supabase/client";
 
 type AnalysisResult = {
@@ -77,7 +78,7 @@ function normalizeSubmitErrorMessage(message: string) {
     return "SkillChain could not read that repository. Check the GitHub URL and confirm that the repository is public.";
   }
 
-  return message;
+  return friendlyErrorMessage(message, "Repository analysis failed.");
 }
 
 export default function SubmitClient() {

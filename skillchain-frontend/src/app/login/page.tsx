@@ -8,6 +8,7 @@ import { User, Mail, Lock, ShieldCheck, Sparkles, Zap, ArrowRight, GitBranch, Te
 import BackButton from "@/components/BackButton";
 import LiquidEther from "@/components/LiquidEther";
 import StatePanel from "@/components/StatePanel";
+import { clearIntentionalLogout } from "@/lib/auth-session";
 import { createClient } from "@/utils/supabase/client";
 
 function getAuthErrorMessage(error: unknown) {
@@ -207,7 +208,10 @@ export default function LoginPage() {
         console.error(error);
         setErrorMessage(error.message);
         setLoading(null);
+        return;
       }
+
+      clearIntentionalLogout();
     } catch (error) {
       console.error(error);
       setErrorMessage(getAuthErrorMessage(error));
@@ -258,6 +262,7 @@ export default function LoginPage() {
           return;
         }
 
+        clearIntentionalLogout();
         router.push("/dashboard");
         router.refresh();
         return;
@@ -282,6 +287,7 @@ export default function LoginPage() {
       }
 
       if (data.session) {
+        clearIntentionalLogout();
         router.push("/dashboard");
         router.refresh();
         return;
@@ -605,10 +611,10 @@ export default function LoginPage() {
 
               <div className="mt-5 flex justify-center">
                 <Link
-                  href="/dashboard"
+                  href="/"
                   className="group inline-flex items-center gap-1 text-xs text-muted transition-colors hover:text-white"
                 >
-                  Skip for now, go to dashboard
+                  Not ready to sign in? Back to home
                   <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-1" />
                 </Link>
               </div>

@@ -216,6 +216,13 @@ The backend now expects the following blockchain configuration:
 - `ISSUER_WALLET_ADDRESS`
 
 For development, Polygon Amoy uses chain id `80002`.
+Use the current public Amoy RPC from Polygon's RPC docs:
+
+- `https://polygon-amoy.drpc.org`
+
+Do not use the deprecated Polygon-operated Amoy endpoint:
+
+- `https://rpc-amoy.polygon.technology/`
 
 ### Quick Setup For Blockchain Verification
 

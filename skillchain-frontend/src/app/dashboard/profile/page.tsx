@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient, getSessionUser } from "@/utils/supabase/server";
+import { getSessionUser } from "@/utils/supabase/server";
 import { averageNumbers } from "@/lib/formatting";
 import { fetchDashboardProjects, type ProjectRecord } from "@/lib/dashboard-data";
 import ProfileClient from "./ProfileClient";
@@ -10,13 +10,6 @@ export default async function ProfilePage() {
   if (!user) {
     redirect("/login");
   }
-
-  const signOut = async () => {
-    "use server";
-    const supabase = await createClient();
-    await supabase.auth.signOut();
-    redirect("/login");
-  };
 
   const displayName =
     user.user_metadata?.full_name ||
@@ -134,7 +127,6 @@ export default async function ProfilePage() {
         profileStats={profileStats}
         verifiedSkills={verifiedSkills}
         loadError={loadError}
-        signOutAction={signOut}
       />
     </main>
   );

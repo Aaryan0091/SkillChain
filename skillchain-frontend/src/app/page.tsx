@@ -16,6 +16,7 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { hasIntentionalLogout } from "@/lib/auth-session";
 
 const fadeUp: Variants = {
   hidden: { opacity: 0, y: 30 },
@@ -55,6 +56,11 @@ export default function Home() {
     const supabase = createClient();
 
     const loadUser = async () => {
+      if (hasIntentionalLogout()) {
+        setIsAuthenticated(false);
+        return;
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -67,6 +73,11 @@ export default function Home() {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (hasIntentionalLogout()) {
+        setIsAuthenticated(false);
+        return;
+      }
+
       setIsAuthenticated(Boolean(session?.user));
     });
 

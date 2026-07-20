@@ -9,6 +9,7 @@ import StatePanel from "@/components/StatePanel";
 import { formatLongDate } from "@/lib/formatting";
 import { buildSkillchainApiUrl } from "@/lib/skillchain-api";
 import { resolveCertificateVerification } from "@/lib/certificate-verification";
+import { getErrorMessage } from "@/lib/user-facing-errors";
 import { createClient } from "@/utils/supabase/client";
 
 type ScoreRecord = {
@@ -150,9 +151,7 @@ export default function CertificatesClient() {
         if (!isActive) return;
         startTransition(() => {
           setProjects([]);
-          setLoadError(
-            error instanceof Error ? error.message : "Could not load certificates."
-          );
+          setLoadError(getErrorMessage(error, "Could not load certificates."));
           setIsLoading(false);
         });
       });
@@ -222,6 +221,8 @@ export default function CertificatesClient() {
             variant="error"
             title="Could not load certificates"
             message={loadError}
+            actionHref="/dashboard/projects"
+            actionLabel="Open projects"
           />
         ) : null}
         {actionError ? (
@@ -229,6 +230,8 @@ export default function CertificatesClient() {
             variant="error"
             title="Certificate action failed"
             message={actionError}
+            actionHref="/dashboard/certificates"
+            actionLabel="Refresh certificates"
           />
         ) : null}
       </section>
