@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { motion, Variants } from "framer-motion";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import Aurora from "../components/Aurora";
 import LiquidEther from "../components/LiquidEther";
 import { 
@@ -72,7 +73,8 @@ export default function Home() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, session: Session | null) => {
       if (hasIntentionalLogout()) {
         setIsAuthenticated(false);
         return;

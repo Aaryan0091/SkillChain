@@ -109,6 +109,8 @@ export default function RecruiterClient({
             setActiveCandidate((current) => ({
               ...current,
               ...data.candidate,
+              email: data.candidate.email ?? null,
+              primaryCertificateId: data.candidate.primaryCertificateId ?? null,
               isCurrentUser: data.candidate.id === viewerId,
             }));
           }
@@ -148,6 +150,8 @@ export default function RecruiterClient({
             setCandidateResults(
               data.map((item) => ({
                 ...item,
+                email: item.email ?? null,
+                primaryCertificateId: item.primaryCertificateId ?? null,
                 isCurrentUser: item.id === viewerId,
               }))
             );

@@ -3,7 +3,12 @@
 import Link from "next/link";
 import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
+import type {
+  AuthChangeEvent,
+  Session,
+  User,
+  UserResponse,
+} from "@supabase/supabase-js";
 import BackButton from "@/components/BackButton";
 import { hasIntentionalLogout, signOutCompletely } from "@/lib/auth-session";
 import { readStoredDecisionBoard } from "@/lib/recruiter-board";
@@ -142,7 +147,8 @@ export default function DashboardLayout({
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(
+      (_event: AuthChangeEvent, session: Session | null) => {
       if (!isActive) return;
 
       if (hasIntentionalLogout()) {
@@ -155,7 +161,7 @@ export default function DashboardLayout({
         return;
       }
 
-      void supabase.auth.getUser().then(({ data }) => {
+      void supabase.auth.getUser().then(({ data }: UserResponse) => {
         if (!isActive) return;
 
         if (!data.user) {
