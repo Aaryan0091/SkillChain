@@ -280,7 +280,6 @@ export default function SkillCertificateView({
           <PublicCertificateTools
             certificateId={certificate.id}
             verificationUrl={certificate.verification_url}
-            recordHrefBase="/dashboard/verify"
           />
         </div>
 
@@ -386,7 +385,7 @@ export default function SkillCertificateView({
                 <h2 className="text-lg font-semibold text-slate-950">Share & Inspect</h2>
               </div>
               <p className="mt-3 text-sm leading-relaxed text-slate-600">
-                Use the public record for proof sharing and the repository link for direct project inspection.
+                Use the certificate link for proof sharing and the repository link for direct project inspection.
               </p>
               <div className="mt-5 flex flex-wrap gap-3">
                 {project?.repo_url ? (

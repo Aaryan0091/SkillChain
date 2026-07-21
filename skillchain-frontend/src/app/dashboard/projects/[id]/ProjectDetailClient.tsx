@@ -472,7 +472,7 @@ export default function ProjectDetailClient({ projectId }: { projectId: string }
                     href={`/verify/${certificates[0].id}`}
                     className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-4 py-2 text-sm font-semibold text-accent transition-colors hover:bg-accent/15"
                   >
-                    Open public verify
+                    Verify certificate
                     <ArrowUpRight className="h-4 w-4" />
                   </Link>
                 ) : null}

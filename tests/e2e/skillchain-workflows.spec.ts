@@ -339,7 +339,7 @@ test("certificates page lists issued certificates and opens detail page", async 
   await expect(page.getByText("Verification passed").first()).toBeVisible();
 });
 
-test("public verify opens a certificate record", async ({ page }) => {
+test("certificate verification opens a certificate record", async ({ page }) => {
   await page.goto("/dashboard/verify");
 
   await expect(page.getByRole("link", { name: "Verify", exact: true })).toHaveAttribute(
@@ -347,7 +347,7 @@ test("public verify opens a certificate record", async ({ page }) => {
     "page"
   );
   await page.getByPlaceholder("Paste a public certificate ID").fill(certificate.id);
-  await page.getByRole("button", { name: "Open Public Record" }).click();
+  await page.getByRole("button", { name: "Verify Certificate" }).click();
 
   await expect(page).toHaveURL(/\/dashboard\/verify\/e2e-certificate-001$/);
   await expect(page.getByText("Verified").first()).toBeVisible();

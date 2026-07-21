@@ -31,7 +31,7 @@ const verificationSignals = [
   {
     title: "Project Certificate Integrity",
     description:
-      "Every public record maps back to one stable project certificate payload.",
+      "Every certificate maps back to one stable project proof payload.",
     icon: <Fingerprint className="h-5 w-5 text-accent" />,
   },
   {
@@ -122,8 +122,8 @@ export default function VerifyIndexClient({
   }, []);
 
   return (
-    <div className="mt-8 grid grid-cols-1 items-start gap-8 lg:grid-cols-12">
-      <div className="space-y-6 lg:col-span-5">
+    <div className="mt-8 grid grid-cols-1 items-start gap-6">
+      <div className="grid gap-6 xl:grid-cols-[0.85fr_1.15fr]">
         <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-surface/40 p-5 shadow-2xl backdrop-blur-xl sm:p-6 lg:p-7">
           <div className="pointer-events-none absolute -right-20 -top-20 h-64 w-64 rounded-full bg-accent/20 blur-[80px]" />
           <div className="pointer-events-none absolute -bottom-20 -left-20 h-64 w-64 rounded-full bg-blue-500/10 blur-[80px]" />
@@ -134,12 +134,12 @@ export default function VerifyIndexClient({
             </div>
 
             <h2 className="mb-2 text-2xl font-bold text-white">
-              {isDashboard ? "Open Verification Record" : "Lookup Public Record"}
+              {isDashboard ? "Open Verification Record" : "Lookup Certificate"}
             </h2>
             <p className="mb-6 text-sm leading-relaxed text-muted-foreground">
               {isDashboard
                 ? "Paste a certificate ID from your saved projects to open its verification view inside the dashboard."
-                : "Paste a public certificate ID to open the main proof page for one saved project."}
+                : "Paste a certificate ID to open the main proof page for one saved project."}
             </p>
 
             <VerifySearchFormInner recordBasePath={recordBasePath} />
@@ -149,13 +149,13 @@ export default function VerifyIndexClient({
               <span>
                 {isDashboard
                   ? "Saved certificate lookup only. The verification page opens in your workspace."
-                  : "Public-safe lookup only. Private account data stays hidden."}
+                  : "Certificate lookup only. Private account data stays hidden."}
               </span>
             </div>
           </div>
         </section>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-1">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {(isDashboard ? verificationSignals.slice(0, 2) : verificationSignals).map((signal) => (
             <article
               key={signal.title}
@@ -175,10 +175,12 @@ export default function VerifyIndexClient({
           ))}
         </div>
 
-        <VerificationStatusLegend compact />
+        <div className="xl:col-span-2">
+          <VerificationStatusLegend compact />
+        </div>
       </div>
 
-      <div className="space-y-6 lg:col-span-7">
+      <div className="space-y-6">
         <section className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-surface/40 p-5 shadow-2xl backdrop-blur-xl sm:p-6 lg:p-7">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(52,211,153,0.12),transparent_28%),radial-gradient(circle_at_20%_80%,rgba(59,130,246,0.12),transparent_26%)]" />
           <div className="relative z-10 mx-auto max-w-5xl">
@@ -195,7 +197,7 @@ export default function VerifyIndexClient({
             <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground">
               {isDashboard
                 ? "Use this area to jump into any issued project certificate, inspect its proof state, and confirm whether it is verified, pending, or failed."
-                : "Instead of rerunning live analysis every time, this page opens a stable saved record with one project&apos;s scores, evidence summary, and certificate status."}
+                : "Instead of rerunning live analysis every time, this page opens a stable certificate with one project&apos;s scores, evidence summary, and proof status."}
             </p>
 
             <div className="mt-6 grid gap-4 md:grid-cols-3">
@@ -235,7 +237,7 @@ export default function VerifyIndexClient({
           <div className="mx-auto flex max-w-5xl flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted">
-                {isDashboard ? "Recent Verification Records" : "Recent Public Records"}
+                {isDashboard ? "Recent Verification Records" : "Recent Certificates"}
               </p>
               <h3 className="text-2xl font-semibold tracking-tight text-white">
                 {isDashboard ? "Recently saved certificates" : "Recently issued certificates"}
@@ -244,7 +246,7 @@ export default function VerifyIndexClient({
             <p className="max-w-md text-sm leading-relaxed text-muted">
               {isDashboard
                 ? "Open any saved certificate below to inspect its proof and current verification state."
-                : "Open any record below to inspect its saved proof and verification status."}
+                : "Open any certificate below to inspect its saved proof and verification status."}
             </p>
           </div>
 
@@ -265,7 +267,7 @@ export default function VerifyIndexClient({
                   </p>
                   <h3 className="mt-3 break-all text-lg font-bold text-white sm:text-xl">{certificate.id}</h3>
                   <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                    Open the public record to inspect this project certificate and its saved verification data.
+                    Open this certificate to inspect its saved project proof and verification data.
                   </p>
                   <p className="mt-3 text-xs font-medium uppercase tracking-[0.16em] text-white/45">
                     Issued {formatDate(certificate.created_at)}

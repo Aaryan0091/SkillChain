@@ -56,7 +56,7 @@ export function VerifySearchFormInner({
           <div className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-accent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
           <span className="relative z-10 flex items-center justify-center gap-2">
             <Activity className="h-5 w-5" />
-            Open Public Record
+            Verify Certificate
           </span>
         </button>
       </div>

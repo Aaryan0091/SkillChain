@@ -96,8 +96,15 @@ function repoLabel(project: ProjectRecord) {
 
 function projectStatusLabel(project: ProjectRecord) {
   switch (project.analysis_status) {
-    case "completed":
-      return project.certificates?.length ? "Certificate ready" : "Stable";
+    case "completed": {
+      const certificate = project.certificates?.[0];
+      if (!certificate) return "Stable";
+
+      const verification = resolveCertificateVerification(certificate, project);
+      if (verification.state === "verified") return "Certificate verified";
+      if (verification.state === "failed") return "Verification failed";
+      return "Verification pending";
+    }
     case "processing":
       return "Analyzing";
     case "failed":
@@ -427,16 +434,32 @@ export default function DashboardClient({
                   </Link>
                 ) : null}
               </div>
-              <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${statusTone(focusProject ? projectStatusLabel(focusProject) : "Queued", {
-                Stable: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
-                "Ready for cert": "border-amber-400/20 bg-amber-400/10 text-amber-300",
-                "Certificate ready": "border-amber-400/20 bg-amber-400/10 text-amber-300",
-                Analyzing: "border-sky-400/20 bg-sky-400/10 text-sky-300",
-                "Needs retry": "border-red-400/20 bg-red-400/10 text-red-300",
-              })}`}>
-                <Clock3 className="h-3.5 w-3.5" />
-                {focusProject ? projectStatusLabel(focusProject) : isLoading ? "Loading" : "Waiting"}
-              </span>
+              {(() => {
+                const status = focusProject
+                  ? projectStatusLabel(focusProject)
+                  : isLoading
+                    ? "Loading"
+                    : "Waiting";
+                const isFinal = status === "Certificate verified" || status === "Stable";
+                const isFailed = status === "Verification failed" || status === "Needs retry";
+                const StatusIcon = isFinal ? CheckCircle2 : isFailed ? ShieldCheck : Clock3;
+
+                return (
+                  <span className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${statusTone(status, {
+                    Stable: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+                    "Certificate verified": "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+                    "Verification pending": "border-[#a8f5e9]/30 bg-[#a8f5e9]/10 text-[#a8f5e9]",
+                    "Verification failed": "border-red-400/20 bg-red-400/10 text-red-300",
+                    Analyzing: "border-sky-400/20 bg-sky-400/10 text-sky-300",
+                    "Needs retry": "border-red-400/20 bg-red-400/10 text-red-300",
+                    Loading: "border-white/10 bg-white/5 text-white/75",
+                    Waiting: "border-white/10 bg-white/5 text-white/75",
+                  })}`}>
+                    <StatusIcon className="h-3.5 w-3.5" />
+                    {status}
+                  </span>
+                );
+              })()}
             </div>
 
             <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
@@ -485,9 +508,9 @@ export default function DashboardClient({
                     </Link>
                     <Link
                       href={`/dashboard/verify/${focusProject.certificates[0].id}`}
-                      className="inline-flex items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent transition-colors hover:bg-accent/15"
+                      className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-accent/20 bg-accent/10 px-3 py-1.5 text-xs font-semibold text-accent transition-colors hover:bg-accent/15"
                     >
-                      Open public verify
+                      Verify certificate
                     </Link>
                   </div>
                 ) : null}
@@ -580,8 +603,9 @@ export default function DashboardClient({
                       <span
                         className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-semibold ${statusTone(project.status, {
                           Stable: "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
-                          "Ready for cert": "border-amber-400/20 bg-amber-400/10 text-amber-300",
-                          "Certificate ready": "border-amber-400/20 bg-amber-400/10 text-amber-300",
+                          "Certificate verified": "border-emerald-400/20 bg-emerald-400/10 text-emerald-300",
+                          "Verification pending": "border-[#a8f5e9]/30 bg-[#a8f5e9]/10 text-[#a8f5e9]",
+                          "Verification failed": "border-red-400/20 bg-red-400/10 text-red-300",
                           Analyzing: "border-sky-400/20 bg-sky-400/10 text-sky-300",
                           "Needs retry": "border-red-400/20 bg-red-400/10 text-red-300",
                         })}`}

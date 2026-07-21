@@ -13,8 +13,7 @@ export default async function VerifyCertificatePage({ params }: VerifyPageProps)
     <VerifyCertificatePageContent
       id={id}
       backHref="/verify"
-      backText="Back to Search"
-      recordHrefBase="/verify"
+      backText="Back to Verify"
     />
   );
 }

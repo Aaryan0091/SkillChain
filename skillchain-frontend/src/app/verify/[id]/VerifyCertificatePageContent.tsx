@@ -207,14 +207,12 @@ export default async function VerifyCertificatePageContent({
   id,
   backHref,
   backText,
-  recordHrefBase = "/verify",
   showInlineBackButton = true,
   showPageBackButton = true,
 }: {
   id: string;
   backHref: string;
   backText: string;
-  recordHrefBase?: string;
   showInlineBackButton?: boolean;
   showPageBackButton?: boolean;
 }) {
@@ -349,7 +347,7 @@ export default async function VerifyCertificatePageContent({
       ];
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-6xl px-4 py-8 sm:px-6 sm:py-10 lg:px-10 lg:py-12">
+    <main className="mx-auto min-h-screen w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-10 lg:px-10 lg:py-12">
       {showPageBackButton ? (
         <div className="mb-6">
           <BackButton href={backHref} text={backText} />
@@ -398,7 +396,6 @@ export default async function VerifyCertificatePageContent({
         <PublicCertificateTools
           certificateId={certificate.id}
           verificationUrl={certificate.verification_url}
-          recordHrefBase={recordHrefBase}
         />
 
         <VerificationStatusLegend compact />
@@ -418,7 +415,7 @@ export default async function VerifyCertificatePageContent({
           ))}
         </section>
 
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="grid gap-6">
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
               {statCards.map((stat, i) => {

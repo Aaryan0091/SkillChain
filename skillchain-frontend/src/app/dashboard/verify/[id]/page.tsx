@@ -14,7 +14,6 @@ export default async function DashboardVerifyCertificatePage({ params }: PagePro
       id={id}
       backHref="/dashboard/verify"
       backText="Back to Verify"
-      recordHrefBase="/dashboard/verify"
       showInlineBackButton={false}
       showPageBackButton={false}
     />
